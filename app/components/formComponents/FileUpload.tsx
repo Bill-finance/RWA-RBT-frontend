@@ -5,8 +5,9 @@ import { motion } from "framer-motion";
 import clsx from "clsx";
 import { InboxOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
+import { RcFile } from "antd/es/upload";
 
-interface FileUploadProps extends Omit<UploadProps, "onChange" | "fileList"> {
+interface FileUploadProps extends Omit<UploadProps, "onChange"> {
   label?: string;
   error?: string;
   value?: File[];
@@ -26,30 +27,29 @@ export default function FileUpload({
   maxSize = 5 * 1024 * 1024, // 5MB
   ...props
 }: FileUploadProps) {
-  const uploadProps: UploadProps = {
-    name: "file",
-    multiple: false,
-    accept,
-    fileList: value.map((file) => ({
-      uid: file.name,
-      name: file.name,
-      status: "done",
-      originFileObj: file,
-    })),
-    onChange: ({ fileList }) => {
-      const files = fileList
-        .map((file) => file.originFileObj)
-        .filter((file): file is File => file !== undefined);
-      onChange?.(files);
-    },
-    beforeUpload: (file) => {
-      if (file.size > maxSize) {
-        console.error(`File size cannot exceed ${maxSize / 1024 / 1024}MB`);
-        return false;
-      }
+  // Convert File[] to UploadFile[]
+  const fileList: UploadFile[] = value?.map((file) => ({
+    uid: file.name,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    status: "done",
+    originFileObj: file as RcFile,
+  }));
+
+  const handleChange: UploadProps["onChange"] = ({ fileList }) => {
+    const files = fileList
+      .map((file) => file.originFileObj)
+      .filter((file): file is RcFile => file !== undefined);
+    onChange?.(files);
+  };
+
+  const handleBeforeUpload = (file: RcFile) => {
+    if (file.size > maxSize) {
+      console.error(`File size cannot exceed ${maxSize / 1024 / 1024}MB`);
       return false;
-    },
-    ...props,
+    }
+    return false;
   };
 
   return (
@@ -62,7 +62,13 @@ export default function FileUpload({
         className={clsx("relative", error && "animate-shake")}
       >
         <AntdUpload.Dragger
-          {...uploadProps}
+          {...props}
+          name="file"
+          multiple={false}
+          accept={accept}
+          fileList={fileList}
+          onChange={handleChange}
+          beforeUpload={handleBeforeUpload}
           className={clsx(
             "w-full",
             "bg-white/5",
@@ -74,6 +80,9 @@ export default function FileUpload({
             "[&_.ant-upload-text]:!text-white/80",
             "[&_.ant-upload-hint]:!text-gray-400",
             "[&_.ant-upload-drag-icon_.anticon]:!text-blue-500",
+            "[&_.ant-upload-list]:!text-white/80",
+            "[&_.ant-upload-list-item-name]:!text-white/80",
+            "[&_.ant-upload-list-item-card-actions]:!text-white/60",
             className
           )}
         >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Form } from "antd";
 import Input from "./formComponents/Input";
 import DatePicker from "./formComponents/DatePicker";
 import FileUpload from "./formComponents/FileUpload";
@@ -25,17 +25,10 @@ export default function BillForm({
   onSubmit,
   onRemove,
 }: BillFormProps) {
-  const [formData, setFormData] = useState<BillFormData>({
-    payer: initialData?.payer || "",
-    amount: initialData?.amount || "",
-    billNumber: initialData?.billNumber || "",
-    billDate: initialData?.billDate || new Date(),
-    billImage: initialData?.billImage || null,
-  });
+  const [form] = Form.useForm<BillFormData>();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit?.(formData);
+  const handleFinish = (values: BillFormData) => {
+    onSubmit?.(values);
   };
 
   return (
@@ -58,58 +51,63 @@ export default function BillForm({
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <Form
+        form={form}
+        initialValues={initialData}
+        onFinish={handleFinish}
+        layout="vertical"
+        className="space-y-6"
+      >
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Input
-            label="Payer"
-            value={formData.payer}
-            onChange={(e) =>
-              setFormData({ ...formData, payer: e.target.value })
-            }
-            placeholder="Enter account address"
-          />
-          <Input
-            label="Amount"
-            prefix="¥"
-            value={formData.amount}
-            onChange={(e) =>
-              setFormData({ ...formData, amount: e.target.value })
-            }
-            placeholder="Enter amount"
-          />
+          <Form.Item
+            name="payer"
+            rules={[{ required: true, message: "Please enter payer address" }]}
+          >
+            <Input label="Payer" placeholder="Enter account address" />
+          </Form.Item>
+          <Form.Item
+            name="amount"
+            rules={[
+              { required: true, message: "Please enter amount" },
+              {
+                pattern: /^\d+(\.\d{1,2})?$/,
+                message: "Please enter a valid amount",
+              },
+            ]}
+          >
+            <Input label="Amount" prefix="¥" placeholder="Enter amount" />
+          </Form.Item>
         </div>
 
         {/* Bill Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <Input
-              label="Bill Number"
-              value={formData.billNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, billNumber: e.target.value })
-              }
-              placeholder="Enter bill number"
-            />
-            <DatePicker
-              label="Bill Date"
-              value={formData.billDate}
-              onChange={(date) =>
-                setFormData({ ...formData, billDate: date || new Date() })
-              }
-            />
+            <Form.Item
+              name="billNumber"
+              rules={[{ required: true, message: "Please enter bill number" }]}
+            >
+              <Input label="Bill Number" placeholder="Enter bill number" />
+            </Form.Item>
+            <Form.Item
+              name="billDate"
+              rules={[{ required: true, message: "Please select bill date" }]}
+            >
+              <DatePicker label="Bill Date" />
+            </Form.Item>
           </div>
-          <FileUpload
-            label="Bill Image"
-            accept="image/jpeg,image/png"
-            maxSize={5 * 1024 * 1024}
-            value={formData.billImage ? [formData.billImage] : []}
-            onChange={(files) =>
-              setFormData({ ...formData, billImage: files[0] || null })
-            }
-          />
+          <Form.Item
+            name="billImage"
+            rules={[{ required: true, message: "Please upload bill image" }]}
+          >
+            <FileUpload
+              label="Bill Image"
+              accept="image/jpeg,image/png"
+              maxSize={5 * 1024 * 1024}
+            />
+          </Form.Item>
         </div>
-      </form>
+      </Form>
     </motion.div>
   );
 }
