@@ -1,7 +1,11 @@
 export const navigationItems = [
+  // {
+  //   name: "Home",
+  //   href: "/",
+  // },
   {
-    name: "Home",
-    href: "/",
+    name: "Playground",
+    href: "/playground",
   },
   {
     name: "Products",
