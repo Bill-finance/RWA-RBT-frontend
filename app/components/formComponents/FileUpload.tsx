@@ -1,67 +1,55 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Upload as AntdUpload } from "antd";
 import { motion } from "framer-motion";
+import clsx from "clsx";
+import { InboxOutlined } from "@ant-design/icons";
+import type { UploadFile, UploadProps } from "antd";
 
-interface FileUploadProps {
+interface FileUploadProps extends Omit<UploadProps, "onChange" | "fileList"> {
   label?: string;
   error?: string;
+  value?: File[];
+  onChange?: (files: File[]) => void;
+  className?: string;
   accept?: string;
   maxSize?: number;
-  onFileSelect?: (file: File) => void;
-  className?: string;
 }
 
 export default function FileUpload({
   label,
   error,
-  accept = "image/*",
-  maxSize = 5 * 1024 * 1024, // 5MB default
-  onFileSelect,
+  value = [],
+  onChange,
   className = "",
+  accept = "image/*",
+  maxSize = 5 * 1024 * 1024, // 5MB
+  ...props
 }: FileUploadProps) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    handleFile(file);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFile(file);
-    }
-  };
-
-  const handleFile = (file: File) => {
-    if (file.size > maxSize) {
-      // Handle file too large error
-      return;
-    }
-    setSelectedFile(file);
-    onFileSelect?.(file);
-  };
-
-  const handleReset = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  const uploadProps: UploadProps = {
+    name: "file",
+    multiple: false,
+    accept,
+    fileList: value.map((file) => ({
+      uid: file.name,
+      name: file.name,
+      status: "done",
+      originFileObj: file,
+    })),
+    onChange: ({ fileList }) => {
+      const files = fileList
+        .map((file) => file.originFileObj)
+        .filter((file): file is File => file !== undefined);
+      onChange?.(files);
+    },
+    beforeUpload: (file) => {
+      if (file.size > maxSize) {
+        console.error(`File size cannot exceed ${maxSize / 1024 / 1024}MB`);
+        return false;
+      }
+      return false;
+    },
+    ...props,
   };
 
   return (
@@ -70,60 +58,34 @@ export default function FileUpload({
         <label className="block text-sm text-gray-400 mb-2">{label}</label>
       )}
       <motion.div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        animate={{
-          scale: isDragging ? 1.02 : 1,
-          borderColor: isDragging
-            ? "rgba(59, 130, 246, 0.5)"
-            : "rgba(255, 255, 255, 0.1)",
-        }}
-        className={`
-          relative
-          min-h-[200px]
-          border-2 border-dashed border-white/10
-          rounded-lg
-          bg-white/5
-          transition-colors
-          ${isDragging ? "bg-blue-500/5" : ""}
-          ${className}
-        `}
+        whileFocus={{ scale: 1.01 }}
+        className={clsx("relative", error && "animate-shake")}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={accept}
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-          {selectedFile ? (
-            <>
-              <p className="text-white mb-2">{selectedFile.name}</p>
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-2 text-sm text-white bg-white/5 rounded-full hover:bg-white/10 transition-colors"
-                >
-                  Reset
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-gray-400 text-center mb-4">
-                Drag and drop your file here, or click to select
-              </p>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-6 py-2 text-sm text-white bg-blue-500/10 rounded-full hover:bg-blue-500/20 transition-colors"
-              >
-                Select File
-              </button>
-            </>
+        <AntdUpload.Dragger
+          {...uploadProps}
+          className={clsx(
+            "w-full",
+            "bg-white/5",
+            "border-white/10",
+            "text-white",
+            "hover:border-blue-500/20",
+            "focus:ring-2 focus:ring-blue-500/20",
+            "transition-all duration-200",
+            "[&_.ant-upload-text]:!text-white/80",
+            "[&_.ant-upload-hint]:!text-gray-400",
+            "[&_.ant-upload-drag-icon_.anticon]:!text-blue-500",
+            className
           )}
-        </div>
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text">Click or drag file to upload</p>
+          <p className="ant-upload-hint">
+            Support for a single file upload. Maximum file size:{" "}
+            {maxSize / 1024 / 1024}MB
+          </p>
+        </AntdUpload.Dragger>
       </motion.div>
       {error && (
         <motion.p

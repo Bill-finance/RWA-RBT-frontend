@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { DatePicker as AntdDatePicker } from "antd";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import clsx from "clsx";
+import type { Dayjs } from "dayjs";
+import type { DatePickerProps as AntdDatePickerProps } from "antd";
+import dayjs from "dayjs";
 
-interface DatePickerProps {
+interface DatePickerProps
+  extends Omit<AntdDatePickerProps, "onChange" | "value"> {
   label?: string;
   error?: string;
-  value?: Date;
-  onChange?: (date: Date) => void;
+  value?: Date | Dayjs | null;
+  onChange?: (date: Date | null) => void;
   className?: string;
+  placeholder?: string;
 }
 
 export default function DatePicker({
@@ -18,8 +23,18 @@ export default function DatePicker({
   value,
   onChange,
   className = "",
+  placeholder = "Select date",
+  ...props
 }: DatePickerProps) {
-  const [focused, setFocused] = useState(false);
+  const handleChange = (date: Dayjs | null) => {
+    onChange?.(date ? date.toDate() : null);
+  };
+
+  const dayjsValue = value
+    ? value instanceof Date
+      ? dayjs(value)
+      : value
+    : null;
 
   return (
     <div className="w-full">
@@ -28,31 +43,26 @@ export default function DatePicker({
       )}
       <motion.div
         whileFocus={{ scale: 1.01 }}
-        className={`
-          relative
-          ${className}
-        `}
+        className={clsx("relative", error && "animate-shake")}
       >
-        <input
-          type="date"
-          value={value ? format(value, "yyyy-MM-dd") : ""}
-          onChange={(e) => {
-            const date = new Date(e.target.value);
-            onChange?.(date);
-          }}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          className={`
-            w-full px-4 py-2
-            bg-white/5
-            border border-white/10
-            rounded-lg
-            text-white
-            focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/20
-            transition-all duration-200
-            ${error ? "border-red-500/50" : ""}
-            ${focused ? "ring-2 ring-blue-500/20 border-blue-500/20" : ""}
-          `}
+        <AntdDatePicker
+          value={dayjsValue}
+          onChange={handleChange}
+          status={error ? "error" : undefined}
+          placeholder={placeholder}
+          className={clsx(
+            "w-full",
+            "bg-white/5",
+            "border-white/10",
+            "text-white",
+            "placeholder:text-gray-500",
+            "focus:ring-2 focus:ring-blue-500/20",
+            "transition-all duration-200",
+            "[&_.ant-picker-suffix]:!text-gray-400",
+            "[&_.ant-picker-clear]:!bg-white/10 [&_.ant-picker-clear]:!text-gray-400",
+            className
+          )}
+          {...props}
         />
       </motion.div>
       {error && (
