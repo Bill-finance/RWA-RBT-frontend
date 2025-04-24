@@ -5,6 +5,7 @@ import Input from "./formComponents/Input";
 import DatePicker from "./formComponents/DatePicker";
 import FileUpload from "./formComponents/FileUpload";
 import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
 
 export interface BillFormData {
   payer: string;
@@ -26,10 +27,31 @@ export default function BillForm({
   onRemove,
 }: BillFormProps) {
   const [form] = Form.useForm<BillFormData>();
+  const isFirstRender = useRef(true);
 
-  const handleFinish = (values: BillFormData) => {
-    onSubmit?.(values);
+  // 当表单值更改时提交到父组件
+  const handleValuesChange = (
+    _: Record<string, unknown>,
+    allValues: BillFormData
+  ) => {
+    if (onSubmit && !isFirstRender.current) {
+      onSubmit(allValues);
+    }
   };
+
+  // 仅在组件首次挂载时设置表单初始值
+  useEffect(() => {
+    if (initialData) {
+      form.setFieldsValue(initialData as BillFormData);
+    }
+    // 标记初始渲染已完成
+    isFirstRender.current = false;
+
+    // 清理函数
+    return () => {
+      isFirstRender.current = true;
+    };
+  }, []); // 仅在挂载时运行一次
 
   return (
     <motion.div
@@ -54,7 +76,7 @@ export default function BillForm({
       <Form
         form={form}
         initialValues={initialData}
-        onFinish={handleFinish}
+        onValuesChange={handleValuesChange}
         layout="vertical"
         className="space-y-6"
       >
@@ -91,6 +113,7 @@ export default function BillForm({
             </Form.Item>
             <Form.Item
               name="billDate"
+              initialValue={new Date()}
               rules={[{ required: true, message: "Please select bill date" }]}
             >
               <DatePicker label="Bill Date" />
@@ -98,10 +121,10 @@ export default function BillForm({
           </div>
           <Form.Item
             name="billImage"
-            rules={[{ required: true, message: "Please upload bill image" }]}
+            rules={[{ required: false, message: "Please upload bill image" }]}
           >
             <FileUpload
-              label="Bill Image"
+              label="Bill Image (Optional)"
               accept="image/jpeg,image/png"
               maxSize={5 * 1024 * 1024}
             />

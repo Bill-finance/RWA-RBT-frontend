@@ -28,8 +28,8 @@ export default function Hero() {
           <GlowingCard className="p-6" glowColor="rgba(0, 255, 255, 0.2)">
             <h3 className="text-xl font-semibold mb-3">Asset Tokenization</h3>
             <p className="text-gray-400">
-              Transform real-world assets into digital tokens with full
-              transparency and compliance
+              Transform assets into digital tokens with full transparency and
+              compliance
             </p>
           </GlowingCard>
         </AnimatedSection>

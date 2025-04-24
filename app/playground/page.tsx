@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import AnimatedSection from "../components/AnimatedSection";
 import BillForm, { BillFormData } from "../components/BillForm";
 import { useInvoice } from "../utils/contracts/useInvoice";
 import { parseEther } from "viem";
-import { useWriteContract, useReadContract } from "wagmi";
 import {
   Button,
   Table,
@@ -17,6 +16,7 @@ import {
   Typography,
   Space,
   Tag,
+  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SearchOutlined, PlusOutlined, EyeOutlined } from "@ant-design/icons";
@@ -31,13 +31,27 @@ const statusOptions = [
   { value: "completed", label: "Completed" },
 ];
 
+// 默认表单数据
+const DEFAULT_BILL_DATA: BillFormData = {
+  payer: "",
+  amount: "",
+  billNumber: "",
+  billDate: new Date(),
+  billImage: null,
+};
+
 export default function PlaygroundPage() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const { contractAddress, contractAbi, getInvoice } = useInvoice();
+  const { useBatchCreateInvoices, useGetInvoice, useGetCurrentUserInvoices } =
+    useInvoice();
 
-  const [bills, setBills] = useState<BillFormData[]>([]);
+  // 使用保存完整billData对象的数组，而不是只存储索引
+  const [bills, setBills] = useState<BillFormData[]>([
+    { ...DEFAULT_BILL_DATA },
+  ]);
+
   const [queryData, setQueryData] = useState({
     billNumber: "",
     status: statusOptions[0].value,
@@ -49,30 +63,54 @@ export default function PlaygroundPage() {
     null
   );
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState<
+    string | undefined
+  >(undefined);
 
-  const { writeContract } = useWriteContract();
+  // 使用更新后的合约钩子
+  const { batchCreateInvoices, isPending, isSuccess, error } =
+    useBatchCreateInvoices();
+  const { data: userInvoicesData } = useGetCurrentUserInvoices();
 
-  const { data: userInvoicesData } = useReadContract({
-    address: contractAddress,
-    abi: contractAbi,
-    functionName: "getUserInvoices",
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-    },
-  });
+  // 查询单个发票数据
+  const { data: queryInvoiceData, refetch: refetchQueryInvoice } =
+    useGetInvoice(queryData.billNumber, true, false);
+
+  // 查看发票详情
+  const { data: viewInvoiceData, refetch: refetchViewInvoice } = useGetInvoice(
+    currentInvoiceNumber,
+    true,
+    !!currentInvoiceNumber
+  );
+
+  // 处理成功或错误的消息提示
+  useEffect(() => {
+    if (isSuccess) {
+      message.success("Invoices created successfully");
+      setBills([{ ...DEFAULT_BILL_DATA }]);
+    }
+    if (error) {
+      message.error(`Error: ${error.message}`);
+    }
+  }, [isSuccess, error]);
+
+  // 加载用户发票列表
+  useEffect(() => {
+    if (userInvoicesData) {
+      setUserInvoices([...(userInvoicesData as string[])]);
+    }
+  }, [userInvoicesData]);
+
+  // 监听发票详情数据变化
+  useEffect(() => {
+    if (viewInvoiceData && currentInvoiceNumber) {
+      setSelectedInvoice(viewInvoiceData as unknown as InvoiceData);
+      setShowInvoiceModal(true);
+    }
+  }, [viewInvoiceData, currentInvoiceNumber]);
 
   const handleAddBill = () => {
-    setBills([
-      ...bills,
-      {
-        payer: "",
-        amount: "",
-        billNumber: "",
-        billDate: new Date(),
-        billImage: null,
-      },
-    ]);
+    setBills([...bills, { ...DEFAULT_BILL_DATA }]);
   };
 
   const handleRemoveBill = (index: number) => {
@@ -80,61 +118,102 @@ export default function PlaygroundPage() {
   };
 
   const handleBillChange = (index: number, data: BillFormData) => {
+    // 仅在开发环境打印日志
+    if (process.env.NODE_ENV === "development") {
+      console.log(`form ${index} data change:`, data);
+    }
+
     const newBills = [...bills];
     newBills[index] = data;
     setBills(newBills);
   };
 
+  const validateFormData = (data: BillFormData[]): boolean => {
+    for (let i = 0; i < data.length; i++) {
+      const bill = data[i];
+      if (!bill.payer) {
+        message.error(`Form #${i + 1}: Payer address cannot be empty`);
+        return false;
+      }
+      if (!/^0x[a-fA-F0-9]{40}$/.test(bill.payer)) {
+        message.error(
+          `Form #${
+            i + 1
+          }: Payer address is invalid, must start with 0x and contain 40 characters`
+        );
+        return false;
+      }
+      if (!bill.amount) {
+        message.error(`Form #${i + 1}: Amount cannot be empty`);
+        return false;
+      }
+      if (!bill.billNumber) {
+        message.error(`Form #${i + 1}: Bill number cannot be empty`);
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!address) return;
+    if (!address) {
+      message.error("Please connect wallet");
+      return;
+    }
 
-    const invoices = bills.map((bill) => {
-      if (!bill.payer) throw new Error("Payer address is required");
-      return {
-        invoiceNumber: bill.billNumber,
-        payee: address,
-        payer: bill.payer as `0x${string}`,
-        amount: parseEther(bill.amount),
-        ipfsHash: "", // TODO: Upload to IPFS
-        timestamp: BigInt(Math.floor(Date.now() / 1000)),
-        dueDate: BigInt(Math.floor(bill.billDate.getTime() / 1000)),
-        isValid: true,
-      };
-    });
+    if (!validateFormData(bills)) {
+      return;
+    }
 
-    await writeContract({
-      address: contractAddress,
-      abi: contractAbi,
-      functionName: "batchCreateInvoices",
-      args: [invoices],
-    });
+    try {
+      console.log("submit :", bills);
+
+      const invoices = bills.map((bill) => {
+        return {
+          invoiceNumber: bill.billNumber,
+          payee: address as `0x${string}`,
+          payer: bill.payer as `0x${string}`,
+          amount: parseEther(bill.amount),
+          ipfsHash: "", // TODO: Upload to IPFS
+          timestamp: BigInt(Math.floor(Date.now() / 1000)),
+          dueDate: BigInt(Math.floor(bill.billDate.getTime() / 1000)),
+          isValid: true,
+        };
+      });
+
+      batchCreateInvoices(invoices);
+    } catch (err) {
+      console.error("submit error:", err);
+      message.error(
+        `submit error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   };
 
   const handleQuery = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!queryData.billNumber) return;
 
-    const invoiceData = getInvoice(queryData.billNumber, true);
-    if (invoiceData.data) {
-      setSearchResult(invoiceData.data as unknown as InvoiceData);
-    }
+    refetchQueryInvoice().then(() => {
+      if (queryInvoiceData) {
+        setSearchResult(queryInvoiceData as unknown as InvoiceData);
+      }
+    });
   };
 
   const handleGetUserInvoices = () => {
-    if (!address || !userInvoicesData) return;
-    setUserInvoices([...(userInvoicesData as string[])]);
+    // 数据已通过useEffect自动更新到userInvoices
   };
 
   const handleViewInvoice = async (invoiceNumber: string) => {
     try {
-      const invoiceResult = getInvoice(invoiceNumber, true);
-      if (invoiceResult.data) {
-        setSelectedInvoice(invoiceResult.data as unknown as InvoiceData);
-        setShowInvoiceModal(true);
-      }
+      // 更新当前查询的发票号码并获取数据
+      setCurrentInvoiceNumber(invoiceNumber);
+      refetchViewInvoice();
     } catch (error) {
       console.error("Error viewing invoice:", error);
+      message.error("Failed to fetch invoice details");
     }
   };
 
@@ -249,7 +328,12 @@ export default function PlaygroundPage() {
               >
                 Add Bill
               </Button>
-              <Button type="primary" htmlType="submit" disabled={!isConnected}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={!isConnected || isPending}
+                loading={isPending}
+              >
                 Submit
               </Button>
             </div>
