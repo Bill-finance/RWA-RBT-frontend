@@ -4,14 +4,43 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { http, createConfig } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
+import { Chain } from "viem";
 
 const queryClient = new QueryClient();
 
+// Define the PHASE testnet chain
+const phaseTestnet: Chain = {
+  id: 50002,
+  name: "Pharos Devnet",
+  nativeCurrency: {
+    decimals: 18,
+    name: "PHASE",
+    symbol: "PHASE",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://devnet.dplabs-internal.com"],
+      webSocket: ["wss://devnet.dplabs-internal.com"],
+    },
+    public: {
+      http: ["https://devnet.dplabs-internal.com"],
+      webSocket: ["wss://devnet.dplabs-internal.com"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "PharosScan",
+      url: "https://pharosscan.xyz",
+    },
+  },
+};
+
 const config = createConfig({
-  chains: [mainnet, sepolia],
+  chains: [mainnet, sepolia, phaseTestnet],
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),
+    [phaseTestnet.id]: http(process.env.NEXT_PUBLIC_PHASE_RPC_URL),
   },
 });
 

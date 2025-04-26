@@ -6,7 +6,7 @@ import { injected } from "wagmi/connectors";
 import AnimatedSection from "../components/AnimatedSection";
 import BillForm, { BillFormData } from "../components/BillForm";
 import { useInvoice } from "../utils/contracts/useInvoice";
-import { parseEther } from "viem";
+import { parseEther, formatEther } from "viem";
 import {
   Button,
   Table,
@@ -170,15 +170,21 @@ export default function PlaygroundPage() {
       console.log("submit :", bills);
 
       const invoices = bills.map((bill) => {
+        const timestamp = Math.floor(Date.now() / 1000).toString();
+        const dueDate = Math.floor(bill.billDate.getTime() / 1000).toString();
+
         return {
-          invoiceNumber: bill.billNumber,
+          invoice_number: bill.billNumber,
           payee: address as `0x${string}`,
           payer: bill.payer as `0x${string}`,
-          amount: parseEther(bill.amount),
-          ipfsHash: "", // TODO: Upload to IPFS
-          timestamp: BigInt(Math.floor(Date.now() / 1000)),
-          dueDate: BigInt(Math.floor(bill.billDate.getTime() / 1000)),
-          isValid: true,
+          amount: parseEther(bill.amount).toString(), // 转换为 wei 字符串
+          ipfs_hash: "",
+          contract_hash: "",
+          timestamp: timestamp,
+          due_date: dueDate,
+          token_batch: "",
+          is_cleared: false,
+          is_valid: false,
         };
       });
 
@@ -242,19 +248,19 @@ export default function PlaygroundPage() {
   const searchResultColumns: ColumnsType<InvoiceData> = [
     {
       title: "Bill Number",
-      dataIndex: "invoiceNumber",
-      key: "invoiceNumber",
+      dataIndex: "invoice_number",
+      key: "invoice_number",
     },
     {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
-      render: (amount) => amount.toString(),
+      render: (amount) => formatEther(BigInt(amount)),
     },
     {
       title: "Status",
-      dataIndex: "isValid",
-      key: "isValid",
+      dataIndex: "is_valid",
+      key: "is_valid",
       render: (isValid) => (
         <Tag color={isValid ? "green" : "red"}>
           {isValid ? "Valid" : "Invalid"}
@@ -268,7 +274,7 @@ export default function PlaygroundPage() {
         <Button
           type="link"
           icon={<EyeOutlined />}
-          onClick={() => handleViewInvoice(record.invoiceNumber)}
+          onClick={() => handleViewInvoice(record.invoice_number)}
         >
           View Details
         </Button>
@@ -382,7 +388,7 @@ export default function PlaygroundPage() {
           <Table
             columns={searchResultColumns}
             dataSource={searchResult ? [searchResult] : []}
-            rowKey="invoiceNumber"
+            rowKey="invoice_number"
             pagination={false}
             locale={{ emptyText: "No data available" }}
           />
@@ -425,7 +431,8 @@ export default function PlaygroundPage() {
           {selectedInvoice && (
             <div>
               <p>
-                <strong>Invoice Number:</strong> {selectedInvoice.invoiceNumber}
+                <strong>Invoice Number:</strong>{" "}
+                {selectedInvoice.invoice_number}
               </p>
               <p>
                 <strong>Payee:</strong> {selectedInvoice.payee}
@@ -439,12 +446,12 @@ export default function PlaygroundPage() {
               <p>
                 <strong>Due Date:</strong>{" "}
                 {new Date(
-                  Number(selectedInvoice.dueDate) * 1000
+                  Number(selectedInvoice.due_date) * 1000
                 ).toLocaleString()}
               </p>
               <p>
                 <strong>Status:</strong>{" "}
-                {selectedInvoice.isValid ? "Valid" : "Invalid"}
+                {selectedInvoice.is_valid ? "Valid" : "Invalid"}
               </p>
             </div>
           )}

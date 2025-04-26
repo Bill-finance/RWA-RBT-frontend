@@ -1,34 +1,200 @@
 import { useContract } from "./useContract";
 import { type InvoiceData } from "./contractABI";
-import { useWriteContract, useReadContract } from "wagmi";
+import {
+  useWriteContract,
+  useReadContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { useEffect } from "react";
 
 export const useInvoice = () => {
   const { contractAddress, contractAbi, address } = useContract();
 
-  // 批量创建票据
   const useBatchCreateInvoices = () => {
-    const { writeContract, isPending, isSuccess, error, data } =
-      useWriteContract();
+    const {
+      writeContract,
+      isPending,
+      isSuccess,
+      error,
+      data: hash,
+    } = useWriteContract();
 
-    const batchCreateInvoices = (invoices: InvoiceData[]) => {
-      if (!contractAddress) return;
-
-      // Using any for the invoices argument due to complex typing constraints
-      // between InvoiceData and the ABI's expectation
-      writeContract({
-        address: contractAddress as `0x${string}`,
-        abi: contractAbi,
-        functionName: "batchCreateInvoices",
-        args: [invoices as any], // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { data: receipt, isLoading: isReceiptLoading } =
+      useWaitForTransactionReceipt({
+        hash: hash as `0x${string}`,
       });
+
+    const batchCreateInvoices = async (invoices: InvoiceData[]) => {
+      if (!contractAddress) {
+        console.error("Contract address is not defined");
+        return;
+      }
+
+      try {
+        const provider = await window.ethereum;
+        const currentChainId = await provider.request({
+          method: "eth_chainId",
+        });
+
+        // Transform invoices to match contract format
+        const transformedInvoices = invoices.map((invoice) => ({
+          invoiceNumber: invoice.invoice_number,
+          payee: invoice.payee as `0x${string}`,
+          payer: invoice.payer as `0x${string}`,
+          amount: invoice.amount,
+          ipfsHash: invoice.ipfs_hash || "",
+          timestamp: BigInt(Math.floor(Date.now() / 1000)),
+          dueDate: BigInt(
+            invoice.due_date || Math.floor(Date.now() / 1000) + 2592000
+          ), // Default to 30 days
+          isValid: true,
+        }));
+
+        // const demo = [
+        //   {
+        //     invoice_number: "INV1745507470",
+        //     payee: "0x360a0E35B3e3b678069E3E84c20889A9399A3fF7",
+        //     payer: "0x360a0E35B3e3b678069E3E84c20889A9399A3fF7",
+        //     amount: "1000000000000000000",
+        //     ipfs_hash: "QmExample1",
+        //     contract_hash: "0x1234567890abcdef",
+        //     timestamp: "1745507470",
+        //     due_date: "1748099470",
+        //     token_batch: "",
+        //     is_cleared: false,
+        //     is_valid: false,
+        //   },
+        // ];
+
+        // console.log("invoices form data", transformedInvoices);
+
+        console.log("Chain and contract info:", {
+          chainId: currentChainId,
+          contractAddress,
+          invoicesCount: invoices.length,
+          invoices: invoices.map((inv) => ({
+            ...inv,
+            amount: inv.amount?.toString() || "0",
+          })),
+        });
+
+        // // Validate invoice data before submission
+        for (const invoice of invoices) {
+          if (!invoice.amount) {
+            throw new Error("Invoice amount is required");
+          }
+          if (!invoice.invoice_number) {
+            throw new Error("Invoice number is required");
+          }
+          if (!invoice.payer) {
+            throw new Error("Payer address is required");
+          }
+        }
+
+        console.log("Submitting transaction with data:", {
+          address: contractAddress,
+          functionName: "batchCreateInvoices",
+          args: [transformedInvoices],
+        });
+
+        const result = await writeContract({
+          abi: contractAbi,
+          address: contractAddress as `0x${string}`,
+          functionName: "batchCreateInvoices",
+          args: [transformedInvoices as any],
+        });
+
+        console.log("Transaction hash:", result);
+        return result;
+      } catch (err: unknown) {
+        // Enhanced MetaMask error handling
+        if (typeof err === "object" && err !== null) {
+          const error = err as {
+            code?: number;
+            message?: string;
+            data?: unknown;
+            name?: string;
+            reason?: string;
+            transaction?: {
+              from?: string;
+              to?: string;
+              value?: string;
+              gas?: string;
+            };
+          };
+
+          console.error("❌ Transaction failed:", {
+            code: error.code,
+            message: error.message,
+            name: error.name,
+            reason: error.reason,
+            transaction: error.transaction,
+            // MetaMask specific error codes
+            errorType:
+              error.code === 4001
+                ? "User rejected"
+                : error.code === -32000
+                ? "Insufficient funds"
+                : error.code === -32603
+                ? "Gas estimation failed"
+                : "Unknown error",
+            fullError: JSON.stringify(error, null, 2),
+          });
+        } else {
+          console.error("❌ Unknown error:", err);
+        }
+        throw err;
+      }
     };
+
+    // Enhanced transaction status monitoring
+    useEffect(() => {
+      if (error) {
+        // We can only detect pre-chain errors here (like user rejection or gas estimation)
+        console.error("❌ Pre-chain error:", {
+          name: error.name,
+          message: error.message,
+          details: error,
+        });
+      }
+
+      if (hash) {
+        // We can only confirm the transaction was submitted to the network
+        console.log("📝 Transaction submitted to network:", {
+          hash,
+          contractAddress,
+        });
+      }
+
+      if (receipt) {
+        // We can see if the transaction was mined, but detailed failure reasons
+        // require additional tools or contract events
+        const status = receipt.status === "success";
+        console.log(`Transaction mined ${status ? "✅" : "❌"}:`, {
+          hash,
+          blockNumber: receipt.blockNumber,
+          gasUsed: receipt.gasUsed.toString(),
+          status: receipt.status,
+        });
+
+        if (receipt.status !== "success") {
+          console.log(
+            "ℹ️ To see detailed failure reason, please check the transaction on block explorer"
+          );
+          // You could add a link to the block explorer here
+          // const explorerUrl = `https://pharosscan.xyz/tx/`;
+        }
+      }
+    }, [error, hash, contractAddress, receipt]);
 
     return {
       batchCreateInvoices,
       isPending,
       isSuccess,
       error,
-      data,
+      hash,
+      receipt,
+      isReceiptLoading,
     };
   };
 

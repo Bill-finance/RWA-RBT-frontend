@@ -1,14 +1,17 @@
 import { type Abi } from "viem";
 
 export interface InvoiceData {
-  invoiceNumber: string;
+  invoice_number: string;
   payee: `0x${string}`;
   payer: `0x${string}`;
-  amount: bigint;
-  ipfsHash: string;
-  timestamp: bigint;
-  dueDate: bigint;
-  isValid: boolean;
+  amount: string;
+  ipfs_hash: string;
+  contract_hash?: string;
+  timestamp: string;
+  due_date: string;
+  token_batch?: string;
+  is_cleared: boolean;
+  is_valid: boolean;
 }
 
 export const CONTRACT_ABI = [
