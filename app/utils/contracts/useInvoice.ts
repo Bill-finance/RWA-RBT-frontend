@@ -39,15 +39,13 @@ export const useInvoice = () => {
         // Transform invoices to match contract format
         const transformedInvoices = invoices.map((invoice) => ({
           invoiceNumber: invoice.invoice_number,
-          payee: invoice.payee as `0x${string}`,
-          payer: invoice.payer as `0x${string}`,
-          amount: invoice.amount,
-          ipfsHash: invoice.ipfs_hash || "",
-          timestamp: BigInt(Math.floor(Date.now() / 1000)),
-          dueDate: BigInt(
-            invoice.due_date || Math.floor(Date.now() / 1000) + 2592000
-          ), // Default to 30 days
-          isValid: true,
+          payee: invoice.payee,
+          payer: invoice.payer,
+          amount: BigInt(invoice.amount),
+          ipfsHash: invoice.ipfs_hash,
+          timestamp: BigInt(invoice.timestamp),
+          dueDate: BigInt(invoice.due_date),
+          isValid: invoice.is_valid,
         }));
 
         // const demo = [
@@ -72,9 +70,11 @@ export const useInvoice = () => {
           chainId: currentChainId,
           contractAddress,
           invoicesCount: invoices.length,
-          invoices: invoices.map((inv) => ({
+          transformedInvoices: transformedInvoices.map((inv) => ({
             ...inv,
-            amount: inv.amount?.toString() || "0",
+            amount: inv.amount.toString(),
+            timestamp: inv.timestamp.toString(),
+            dueDate: inv.dueDate.toString(),
           })),
         });
 
@@ -91,6 +91,9 @@ export const useInvoice = () => {
           }
         }
 
+        // Add detailed logging
+        console.log("Transformed invoices detail:", transformedInvoices);
+
         console.log("Submitting transaction with data:", {
           address: contractAddress,
           functionName: "batchCreateInvoices",
@@ -101,7 +104,7 @@ export const useInvoice = () => {
           abi: contractAbi,
           address: contractAddress as `0x${string}`,
           functionName: "batchCreateInvoices",
-          args: [transformedInvoices as any],
+          args: [transformedInvoices],
         });
 
         console.log("Transaction hash:", result);
@@ -260,6 +263,22 @@ export const useInvoice = () => {
     });
   };
 
+  // 批量查询票据
+  const useBatchGetInvoices = (
+    invoiceNumbers?: string[],
+    enabled: boolean = !!invoiceNumbers?.length
+  ) => {
+    return useReadContract({
+      address: contractAddress as `0x${string}`,
+      abi: contractAbi,
+      functionName: "batchGetInvoices",
+      args: invoiceNumbers ? [invoiceNumbers] : undefined,
+      query: {
+        enabled: enabled && !!invoiceNumbers?.length,
+      },
+    });
+  };
+
   return {
     contractAddress: contractAddress as `0x${string}`,
     contractAbi,
@@ -268,5 +287,6 @@ export const useInvoice = () => {
     useGetUserInvoices,
     useGetCurrentUserInvoices,
     useGetInvoiceMapping,
+    useBatchGetInvoices,
   };
 };

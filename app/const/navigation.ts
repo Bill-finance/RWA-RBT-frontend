@@ -4,6 +4,10 @@ export const navigationItems = [
   //   href: "/",
   // },
   {
+    name: "testPage",
+    href: "/testPage",
+  },
+  {
     name: "Playground",
     href: "/playground",
   },

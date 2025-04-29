@@ -35,12 +35,31 @@ const phaseTestnet: Chain = {
   },
 };
 
+const mantleSepoliaTestNet: Chain = {
+  id: 5003,
+  name: "Mantle Sepolia Testnet",
+  nativeCurrency: {
+    decimals: 18,
+    name: "MNT",
+    symbol: "MNT",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://rpc.sepolia.mantle.xyz"],
+      webSocket: ["wss://ws.sepolia.mantle.xyz"],
+    },
+  },
+};
+
 const config = createConfig({
   chains: [mainnet, sepolia, phaseTestnet],
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),
     [phaseTestnet.id]: http(process.env.NEXT_PUBLIC_PHASE_RPC_URL),
+    [mantleSepoliaTestNet.id]: http(
+      process.env.NEXT_PUBLIC_MANTLE_SEPOLIA_RPC_URL
+    ),
   },
 });
 

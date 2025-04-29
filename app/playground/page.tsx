@@ -6,6 +6,7 @@ import { injected } from "wagmi/connectors";
 import AnimatedSection from "../components/AnimatedSection";
 import BillForm, { BillFormData } from "../components/BillForm";
 import { useInvoice } from "../utils/contracts/useInvoice";
+import { useBatchInvoices } from "../utils/contracts/useBatchInvoices";
 import { parseEther, formatEther } from "viem";
 import {
   Button,
@@ -44,70 +45,96 @@ export default function PlaygroundPage() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const { useBatchCreateInvoices, useGetInvoice, useGetCurrentUserInvoices } =
-    useInvoice();
+  const { useBatchCreateInvoices, useGetInvoice } = useInvoice();
+  const {
+    loadAllInvoices: fetchAllInvoices,
+    getInvoiceDetails,
+    isLoading: isBatchLoading,
+    error: batchError,
+  } = useBatchInvoices();
 
-  // 使用保存完整billData对象的数组，而不是只存储索引
   const [bills, setBills] = useState<BillFormData[]>([
     { ...DEFAULT_BILL_DATA },
   ]);
-
   const [queryData, setQueryData] = useState({
     billNumber: "",
     status: statusOptions[0].value,
   });
-
-  const [userInvoices, setUserInvoices] = useState<string[]>([]);
   const [searchResult, setSearchResult] = useState<InvoiceData | null>(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(
     null
   );
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState<
-    string | undefined
-  >(undefined);
+  const [allInvoices, setAllInvoices] = useState<InvoiceData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 查询单个发票数据
+  const { refetch: refetchQueryInvoice } = useGetInvoice(
+    queryData.billNumber,
+    queryData.status === "completed",
+    !!queryData.billNumber
+  );
 
   // 使用更新后的合约钩子
   const { batchCreateInvoices, isPending, isSuccess, error } =
     useBatchCreateInvoices();
-  const { data: userInvoicesData } = useGetCurrentUserInvoices();
-
-  // 查询单个发票数据
-  const { data: queryInvoiceData, refetch: refetchQueryInvoice } =
-    useGetInvoice(queryData.billNumber, true, false);
-
-  // 查看发票详情
-  const { data: viewInvoiceData, refetch: refetchViewInvoice } = useGetInvoice(
-    currentInvoiceNumber,
-    true,
-    !!currentInvoiceNumber
-  );
 
   // 处理成功或错误的消息提示
   useEffect(() => {
     if (isSuccess) {
       message.success("Invoices created successfully");
       setBills([{ ...DEFAULT_BILL_DATA }]);
+      // 刷新发票列表
+      loadAllInvoices();
     }
     if (error) {
       message.error(`Error: ${error.message}`);
     }
   }, [isSuccess, error]);
 
-  // 加载用户发票列表
+  // 使用批量加载的状态
   useEffect(() => {
-    if (userInvoicesData) {
-      setUserInvoices([...(userInvoicesData as string[])]);
+    if (batchError) {
+      message.error(`Error loading invoices: ${batchError.message}`);
     }
-  }, [userInvoicesData]);
+  }, [batchError]);
 
-  // 监听发票详情数据变化
+  // 转换合约数据到前端格式
+  const transformInvoiceData = (data: {
+    invoiceNumber: string;
+    payee: `0x${string}`;
+    payer: `0x${string}`;
+    amount: bigint;
+    ipfsHash: string;
+    timestamp: bigint;
+    dueDate: bigint;
+    isValid: boolean;
+  }): InvoiceData => ({
+    invoice_number: data.invoiceNumber,
+    payee: data.payee,
+    payer: data.payer,
+    amount: data.amount.toString(),
+    ipfs_hash: data.ipfsHash,
+    contract_hash: "",
+    timestamp: data.timestamp.toString(),
+    due_date: data.dueDate.toString(),
+    token_batch: "",
+    is_cleared: false,
+    is_valid: data.isValid,
+  });
+
+  // 加载所有发票
+  const loadAllInvoices = async () => {
+    const invoices = await fetchAllInvoices();
+    setAllInvoices(invoices);
+  };
+
+  // 页面加载时获取所有票据
   useEffect(() => {
-    if (viewInvoiceData && currentInvoiceNumber) {
-      setSelectedInvoice(viewInvoiceData as unknown as InvoiceData);
-      setShowInvoiceModal(true);
+    if (isConnected) {
+      loadAllInvoices();
     }
-  }, [viewInvoiceData, currentInvoiceNumber]);
+  }, [isConnected]);
 
   const handleAddBill = () => {
     setBills([...bills, { ...DEFAULT_BILL_DATA }]);
@@ -170,14 +197,28 @@ export default function PlaygroundPage() {
       console.log("submit :", bills);
 
       const invoices = bills.map((bill) => {
+        // Convert timestamps to BigInt first, then to string
         const timestamp = Math.floor(Date.now() / 1000).toString();
         const dueDate = Math.floor(bill.billDate.getTime() / 1000).toString();
 
-        return {
+        // Ensure amount is a valid string and convert it properly
+        const amountString = bill.amount?.trim() || "0";
+        let amountInWei;
+        try {
+          amountInWei = parseEther(amountString);
+        } catch (err: unknown) {
+          const error = err as Error;
+          throw new Error(
+            `Invalid amount format for bill ${bill.billNumber}: ${amountString}. Error: ${error.message}`
+          );
+        }
+
+        // Create invoice with both TypeScript type and ABI compatibility
+        const invoice: InvoiceData = {
           invoice_number: bill.billNumber,
           payee: address as `0x${string}`,
           payer: bill.payer as `0x${string}`,
-          amount: parseEther(bill.amount).toString(), // 转换为 wei 字符串
+          amount: amountInWei.toString(),
           ipfs_hash: "",
           contract_hash: "",
           timestamp: timestamp,
@@ -186,8 +227,27 @@ export default function PlaygroundPage() {
           is_cleared: false,
           is_valid: false,
         };
+
+        // Log the invoice for debugging
+        console.log("Prepared invoice:", {
+          ...invoice,
+          // Also log the ABI format for verification
+          abiFormat: {
+            invoiceNumber: invoice.invoice_number,
+            payee: invoice.payee,
+            payer: invoice.payer,
+            amount: invoice.amount,
+            ipfsHash: invoice.ipfs_hash,
+            timestamp: invoice.timestamp,
+            dueDate: invoice.due_date,
+            isValid: invoice.is_valid,
+          },
+        });
+
+        return invoice;
       });
 
+      console.log("Submitting invoices:", invoices);
       batchCreateInvoices(invoices);
     } catch (err) {
       console.error("submit error:", err);
@@ -197,29 +257,44 @@ export default function PlaygroundPage() {
     }
   };
 
-  const handleQuery = (e: FormEvent<HTMLFormElement>) => {
+  const handleQuery = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!queryData.billNumber) return;
+    setIsLoading(true);
 
-    refetchQueryInvoice().then(() => {
-      if (queryInvoiceData) {
-        setSearchResult(queryInvoiceData as unknown as InvoiceData);
+    try {
+      if (!queryData.billNumber) {
+        // 如果没有输入票据号，加载所有票据
+        await loadAllInvoices();
+        return;
       }
-    });
-  };
 
-  const handleGetUserInvoices = () => {
-    // 数据已通过useEffect自动更新到userInvoices
+      console.log("Querying invoice:", queryData.billNumber);
+      const result = await refetchQueryInvoice();
+      console.log("Query result:", result.data);
+
+      if (result.data) {
+        const invoiceData = transformInvoiceData(result.data);
+        setSearchResult(invoiceData);
+        if (!invoiceData.is_valid) {
+          message.warning("This invoice is not valid");
+        }
+      } else {
+        setSearchResult(null);
+        message.info("No invoice found with this number");
+      }
+    } catch (error) {
+      console.error("Query error:", error);
+      message.error("Failed to query invoice");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleViewInvoice = async (invoiceNumber: string) => {
-    try {
-      // 更新当前查询的发票号码并获取数据
-      setCurrentInvoiceNumber(invoiceNumber);
-      refetchViewInvoice();
-    } catch (error) {
-      console.error("Error viewing invoice:", error);
-      message.error("Failed to fetch invoice details");
+    const invoice = await getInvoiceDetails(invoiceNumber);
+    if (invoice) {
+      setSelectedInvoice(invoice);
+      setShowInvoiceModal(true);
     }
   };
 
@@ -245,6 +320,19 @@ export default function PlaygroundPage() {
     },
   ];
 
+  // 表格数据源
+  const tableData = searchResult ? [searchResult] : allInvoices;
+
+  // 状态过滤
+  const filteredData =
+    queryData.status === "all"
+      ? tableData
+      : tableData.filter((invoice) =>
+          queryData.status === "completed"
+            ? invoice.is_valid
+            : !invoice.is_valid
+        );
+
   const searchResultColumns: ColumnsType<InvoiceData> = [
     {
       title: "Bill Number",
@@ -255,7 +343,26 @@ export default function PlaygroundPage() {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
-      render: (amount) => formatEther(BigInt(amount)),
+      render: (amount) => formatEther(BigInt(amount)) + " ETH",
+    },
+    {
+      title: "Payee",
+      dataIndex: "payee",
+      key: "payee",
+      render: (address) => `${address.slice(0, 6)}...${address.slice(-4)}`,
+    },
+    {
+      title: "Payer",
+      dataIndex: "payer",
+      key: "payer",
+      render: (address) => `${address.slice(0, 6)}...${address.slice(-4)}`,
+    },
+    {
+      title: "Due Date",
+      dataIndex: "due_date",
+      key: "due_date",
+      render: (timestamp) =>
+        new Date(Number(timestamp) * 1000).toLocaleDateString(),
     },
     {
       title: "Status",
@@ -386,8 +493,9 @@ export default function PlaygroundPage() {
 
           {/* Query Results */}
           <Table
+            loading={isLoading || isBatchLoading}
             columns={searchResultColumns}
-            dataSource={searchResult ? [searchResult] : []}
+            dataSource={filteredData}
             rowKey="invoice_number"
             pagination={false}
             locale={{ emptyText: "No data available" }}
@@ -401,16 +509,18 @@ export default function PlaygroundPage() {
           </Title>
           <Button
             type="primary"
-            onClick={handleGetUserInvoices}
+            onClick={loadAllInvoices}
             className="mb-6"
-            disabled={!isConnected}
+            disabled={!isConnected || isBatchLoading}
+            loading={isBatchLoading}
           >
             Load My Invoices
           </Button>
 
           <Table
+            loading={isBatchLoading}
             columns={invoiceColumns}
-            dataSource={userInvoices}
+            dataSource={allInvoices.map((invoice) => invoice.invoice_number)}
             rowKey={(record) => record}
             pagination={false}
             locale={{ emptyText: "No invoices found" }}
