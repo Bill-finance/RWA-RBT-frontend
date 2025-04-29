@@ -20,10 +20,12 @@ interface LoginResponse {
 }
 
 export const authApi = {
+  // ✅
   generateChallenge: (data: ChallengeRequest) => {
     return apiRequest.post<ChallengeResponse>("/rwa/user/challenge", data);
   },
 
+  // ✅
   login: (data: LoginRequest) => {
     return apiRequest.post<LoginResponse>("/rwa/user/login", data);
   },

@@ -1,10 +1,12 @@
 import { apiRequest } from "./request";
 
 export const invoiceApi = {
+  // ✅
   create: (data: any) => {
     return apiRequest.post("/rwa/invoice/create", data);
   },
 
+  // ✅
   list: () => {
     return apiRequest.get("/rwa/invoice/list");
   },

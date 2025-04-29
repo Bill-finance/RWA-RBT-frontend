@@ -12,6 +12,7 @@ import {
   Tag,
   message,
   Modal,
+  Popconfirm,
 } from "antd";
 import { SearchOutlined, PlusOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -132,10 +133,23 @@ export default function TestPage() {
     nonce: string;
     requestId: string;
   } | null>(null);
+  const [enterpriseDetail, setEnterpriseDetail] = useState<Enterprise | null>(
+    null
+  );
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // 监听登录状态变化，自动加载数据
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      loadEnterprises();
+      loadInvoices();
+    }
+  }, [localStorage.getItem("token")]);
 
   // 认证相关
   const handleGenerateChallenge = async () => {
@@ -222,6 +236,55 @@ export default function TestPage() {
       loadEnterprises();
     } catch (error) {
       message.error("Failed to create enterprise");
+    }
+  };
+
+  const handleDeleteEnterprise = async (id: string) => {
+    try {
+      await enterpriseApi.delete(id);
+      message.success("Enterprise deleted successfully");
+      loadEnterprises();
+    } catch (error) {
+      message.error("Failed to delete enterprise");
+    }
+  };
+
+  const handleUpdateEnterprise = async (id: string) => {
+    try {
+      const randomName = `Enterprise-${Math.floor(Math.random() * 1000)}`;
+      await enterpriseApi.update(id, {
+        name: randomName,
+        walletAddress: address || "",
+      });
+      message.success("Enterprise updated successfully");
+      loadEnterprises();
+    } catch (error) {
+      message.error("Failed to update enterprise");
+    }
+  };
+
+  const handleViewDetail = async (id: string) => {
+    try {
+      const response = await enterpriseApi.getById(id);
+      if (response?.code === 200) {
+        const detail = {
+          _id: response.data.id,
+          name: response.data.name,
+          walletAddress: response.data.wallet_address,
+          status: response.data.status,
+          kycDetailsIpfsHash: response.data.kyc_details_ipfs_hash,
+          createdAt: new Date(
+            Number(response.data.created_at.$date.$numberLong)
+          ).toLocaleString(),
+          updatedAt: new Date(
+            Number(response.data.updated_at.$date.$numberLong)
+          ).toLocaleString(),
+        };
+        setEnterpriseDetail(detail);
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      message.error("Failed to load enterprise details");
     }
   };
 
@@ -339,15 +402,27 @@ export default function TestPage() {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
-        <Button
-          type="link"
-          onClick={() => {
-            setSelectedEnterprise(record);
-            setShowEnterpriseModal(true);
-          }}
-        >
-          View Details
-        </Button>
+        <Space>
+          <Button type="link" onClick={() => handleViewDetail(record._id)}>
+            View Details
+          </Button>
+          <Button
+            type="link"
+            onClick={() => handleUpdateEnterprise(record._id)}
+          >
+            Update
+          </Button>
+          <Popconfirm
+            title="Are you sure to delete this enterprise?"
+            onConfirm={() => handleDeleteEnterprise(record._id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button type="link" danger>
+              Delete
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -508,26 +583,38 @@ export default function TestPage() {
         {/* Enterprise Detail Modal */}
         <Modal
           title="Enterprise Details"
-          open={showEnterpriseModal}
-          onCancel={() => setShowEnterpriseModal(false)}
+          open={showDetailModal}
+          onCancel={() => setShowDetailModal(false)}
           footer={[
-            <Button key="close" onClick={() => setShowEnterpriseModal(false)}>
+            <Button key="close" onClick={() => setShowDetailModal(false)}>
               Close
             </Button>,
           ]}
         >
-          {selectedEnterprise && (
+          {enterpriseDetail && (
             <div>
               <p>
-                <strong>Name:</strong> {selectedEnterprise.name}
+                <strong>ID:</strong> {enterpriseDetail._id}
+              </p>
+              <p>
+                <strong>Name:</strong> {enterpriseDetail.name}
               </p>
               <p>
                 <strong>Wallet Address:</strong>{" "}
-                {selectedEnterprise.walletAddress}
+                {enterpriseDetail.walletAddress}
               </p>
               <p>
-                <strong>Status:</strong>{" "}
-                {selectedEnterprise.status || "Pending"}
+                <strong>Status:</strong> {enterpriseDetail.status || "Pending"}
+              </p>
+              <p>
+                <strong>KYC IPFS Hash:</strong>{" "}
+                {enterpriseDetail.kycDetailsIpfsHash || "N/A"}
+              </p>
+              <p>
+                <strong>Created At:</strong> {enterpriseDetail.createdAt}
+              </p>
+              <p>
+                <strong>Updated At:</strong> {enterpriseDetail.updatedAt}
               </p>
             </div>
           )}
