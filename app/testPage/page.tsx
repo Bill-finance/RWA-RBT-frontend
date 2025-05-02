@@ -5,7 +5,6 @@ import { useAccount, useConnect, useDisconnect, useSignMessage } from "wagmi";
 import { injected } from "wagmi/connectors";
 import {
   Button,
-  Input,
   Table,
   Typography,
   Space,
@@ -14,7 +13,7 @@ import {
   Modal,
   Popconfirm,
 } from "antd";
-import { SearchOutlined, PlusOutlined, EyeOutlined } from "@ant-design/icons";
+// import { SearchOutlined, PlusOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { authApi, enterpriseApi, invoiceApi, userApi } from "../utils/apis";
 
@@ -116,6 +115,31 @@ interface InvoiceListResponse {
   msg: string;
 }
 
+interface InvoiceCreateRequest {
+  invoice_number: string;
+  creditor_id: string;
+  debtor_id: string;
+  amount: number;
+  currency: string;
+  due_date: string;
+  status: string;
+  ipfs_hash: string;
+  payee: string;
+  payer: string;
+}
+
+interface EnterpriseCreateRequest {
+  name: string;
+  walletAddress: string;
+}
+
+interface EnterpriseUpdateRequest {
+  name?: string;
+  walletAddress?: string;
+  status?: string;
+  kycDetailsIpfsHash?: string;
+}
+
 export default function TestPage() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -127,7 +151,7 @@ export default function TestPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedEnterprise, setSelectedEnterprise] =
     useState<Enterprise | null>(null);
-  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
+  // const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [challengeData, setChallengeData] = useState<{
     nonce: string;
@@ -195,10 +219,10 @@ export default function TestPage() {
       return;
     }
     try {
+      setIsLoading(true);
       const response = await enterpriseApi.list();
-      // 处理返回的数据格式
       if (response?.code === 200 && Array.isArray(response.data)) {
-        const formattedData = response.data.map((item) => ({
+        const formattedData = response.data.map((item: EnterpriseResponse) => ({
           _id: item.id,
           name: item.name,
           walletAddress: item.wallet_address,
@@ -206,19 +230,21 @@ export default function TestPage() {
           kycDetailsIpfsHash: item.kyc_details_ipfs_hash,
           createdAt: new Date(
             Number(item.created_at.$date.$numberLong)
-          ).toLocaleString(),
+          ).toLocaleString("en-US"),
           updatedAt: new Date(
             Number(item.updated_at.$date.$numberLong)
-          ).toLocaleString(),
+          ).toLocaleString("en-US"),
         }));
         setEnterprises(formattedData);
       } else {
         setEnterprises([]);
         message.error("Invalid response format");
       }
-    } catch (error) {
-      message.error("Failed to load enterprises");
+    } catch (error: any) {
+      message.error(error.message || "Failed to load enterprises");
       setEnterprises([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -228,43 +254,58 @@ export default function TestPage() {
       return;
     }
     try {
-      await enterpriseApi.create({
-        name: "Test Enterprise",
+      setIsLoading(true);
+      const enterpriseData: EnterpriseCreateRequest = {
+        name: `Enterprise-${Date.now()}`,
         walletAddress: address,
-      });
+      };
+
+      await enterpriseApi.create(enterpriseData);
       message.success("Enterprise created successfully");
       loadEnterprises();
-    } catch (error) {
-      message.error("Failed to create enterprise");
+    } catch (error: any) {
+      message.error(error.message || "Failed to create enterprise");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDeleteEnterprise = async (id: string) => {
     try {
+      setIsLoading(true);
       await enterpriseApi.delete(id);
       message.success("Enterprise deleted successfully");
       loadEnterprises();
-    } catch (error) {
-      message.error("Failed to delete enterprise");
+    } catch (error: any) {
+      message.error(error.message || "Failed to delete enterprise");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleUpdateEnterprise = async (id: string) => {
     try {
-      const randomName = `Enterprise-${Math.floor(Math.random() * 1000)}`;
-      await enterpriseApi.update(id, {
-        name: randomName,
+      setIsLoading(true);
+      const updateData: EnterpriseUpdateRequest = {
+        name: `Enterprise-${Math.floor(Math.random() * 1000)}`,
         walletAddress: address || "",
-      });
+        status: "verified",
+        kycDetailsIpfsHash: "QmPlaceholder", // This should be replaced with actual IPFS hash
+      };
+
+      await enterpriseApi.update(id, updateData);
       message.success("Enterprise updated successfully");
       loadEnterprises();
-    } catch (error) {
-      message.error("Failed to update enterprise");
+    } catch (error: any) {
+      message.error(error.message || "Failed to update enterprise");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleViewDetail = async (id: string) => {
     try {
+      setIsLoading(true);
       const response = await enterpriseApi.getById(id);
       if (response?.code === 200) {
         const detail = {
@@ -283,8 +324,10 @@ export default function TestPage() {
         setEnterpriseDetail(detail);
         setShowDetailModal(true);
       }
-    } catch (error) {
-      message.error("Failed to load enterprise details");
+    } catch (error: any) {
+      message.error(error.message || "Failed to load enterprise details");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -295,6 +338,7 @@ export default function TestPage() {
       return;
     }
     try {
+      setIsLoading(true);
       const response = await invoiceApi.list();
       if (response?.code === 200 && Array.isArray(response.data)) {
         const formattedData = response.data.map((item: InvoiceResponse) => ({
@@ -329,9 +373,11 @@ export default function TestPage() {
         setInvoices([]);
         message.error("Invalid response format");
       }
-    } catch (error) {
-      message.error("Failed to load invoices");
+    } catch (error: any) {
+      message.error(error.message || "Failed to load invoices");
       setInvoices([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -341,15 +387,40 @@ export default function TestPage() {
       return;
     }
     try {
-      await invoiceApi.create({
+      setIsLoading(true);
+      const invoiceData: InvoiceCreateRequest = {
         invoice_number: `INV-${Date.now()}`,
-        amount: "1000",
+        creditor_id: address, // Using connected wallet as creditor
+        debtor_id: "0x0000000000000000000000000000000000000000", // Placeholder debtor address
+        amount: 1000,
+        currency: "USD",
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
         status: "pending",
-      });
+        ipfs_hash: "QmPlaceholder", // This should be replaced with actual IPFS hash
+        payee: address,
+        payer: "0x0000000000000000000000000000000000000000", // Placeholder payer address
+      };
+
+      await invoiceApi.create(invoiceData);
       message.success("Invoice created successfully");
       await loadInvoices();
-    } catch (error) {
-      message.error("Failed to create invoice");
+    } catch (error: any) {
+      message.error(error.message || "Failed to create invoice");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (id: string) => {
+    try {
+      setIsLoading(true);
+      await invoiceApi.delete(id);
+      message.success("Invoice deleted successfully");
+      await loadInvoices();
+    } catch (error: any) {
+      message.error(error.message || "Failed to delete invoice");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -437,14 +508,14 @@ export default function TestPage() {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
-      render: (amount) => `${amount} USD`,
+      render: (amount, record) => `${amount} ${record.currency}`,
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status) => (
-        <Tag color={status === "Verified" ? "green" : "orange"}>{status}</Tag>
+        <Tag color={status === "verified" ? "green" : "orange"}>{status}</Tag>
       ),
     },
     {
@@ -468,6 +539,24 @@ export default function TestPage() {
       dataIndex: "payer",
       key: "payer",
       render: (address) => `${address.slice(0, 6)}...${address.slice(-4)}`,
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Popconfirm
+            title="Are you sure to delete this invoice?"
+            onConfirm={() => handleDeleteInvoice(record._id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button type="link" danger>
+              Delete
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
     },
   ];
 
