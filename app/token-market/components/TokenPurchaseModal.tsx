@@ -1,9 +1,9 @@
 "use client";
 
-import { Modal, Button, Typography, InputNumber, Form, message } from "antd";
+import { Modal, Button, Typography, InputNumber, Form, message, App } from "antd";
 import { useState } from "react";
-import { useWriteContract } from "wagmi";
 import { TokenInfo } from "../types";
+import { usePurchase } from "@/app/utils/contracts/usePurchase";
 
 const { Text, Title } = Typography;
 
@@ -14,45 +14,26 @@ interface Props {
   onSuccess?: () => void;
 }
 
-// 替换成你自己的合约地址和 ABI
-const CONTRACT_ADDRESS = "0xYourContractAddress";
-const CONTRACT_ABI = [
-  {
-    inputs: [
-      { internalType: "string", name: "tokenBatch", type: "string" },
-      { internalType: "uint256", name: "amount", type: "uint256" }
-    ],
-    name: "purchase",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function"
-  }
-];
-
 export default function TokenPurchaseModal({
   open,
   token,
   onClose,
   onSuccess,
 }: Props) {
+  const { purchase, isPending, isSuccess } = usePurchase();
+  const { message } = App.useApp();
   const [amount, setAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
-  const { writeContractAsync } = useWriteContract();
 
   const handleConfirm = async () => {
     if (!token || amount <= 0) return;
 
     try {
       setLoading(true);
-      const txHash = await writeContractAsync({
-        abi: CONTRACT_ABI,
-        address: CONTRACT_ADDRESS,
-        functionName: "purchase",
-        args: [token.token_batch, BigInt(amount)],
-      });
-
+      const txHash = await purchase(token.token_batch, BigInt(amount));
+ 
       message.success(`Tx sent: ${txHash}`);
       onSuccess?.();
       onClose();

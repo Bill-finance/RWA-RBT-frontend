@@ -166,7 +166,7 @@ export default function TokenMarketPage() {
         <Title level={2}>Token Market</Title>
       </div>
 
-      <Card className="mb-6">
+      {/* <Card className="mb-6">
         <Space direction="horizontal" size="large">
           <Input
             placeholder="Search by batch, creditor or debtor"
@@ -185,8 +185,8 @@ export default function TokenMarketPage() {
             <Option value="DAI">DAI</Option>
           </Select>
         </Space>
-      </Card>
-
+      </Card> */}
+      <Card className="mb-6">
       <Table
         loading={isLoading}
         dataSource={filteredTokens}
@@ -194,6 +194,7 @@ export default function TokenMarketPage() {
         rowKey="token_batch"
         pagination={{ pageSize: 8 }}
       />
+      </Card>
 
       <TokenPurchaseModal
         open={showPurchaseModal}

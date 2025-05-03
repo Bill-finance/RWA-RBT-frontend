@@ -4,6 +4,7 @@ import "./globals.css";
 import { Web3Modal } from "./components/Web3Modal";
 import Header from "./components/Header";
 import ThemeProvider from "./components/ThemeProvider";
+import { App as AntdApp } from "antd";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,8 +23,10 @@ export default function RootLayout({
       <body className={`${inter.className} bg-black text-white`}>
         <Web3Modal>
           <ThemeProvider>
+            <AntdApp>
             <Header />
             <main className="pt-16">{children}</main>
+            </AntdApp>
           </ThemeProvider>
         </Web3Modal>
       </body>

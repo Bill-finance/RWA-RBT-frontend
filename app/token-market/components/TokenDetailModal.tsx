@@ -36,7 +36,7 @@ export default function TokenDetailModal({ open, token, onClose }: Props) {
             {token.ticket_quantity}
           </Descriptions.Item>
           <Descriptions.Item label="Issued Amount">
-            {token.total_issued_amount.toString()}
+            {token.total_issued_amount?.toString()}
           </Descriptions.Item>
           <Descriptions.Item label="Debtor Signed">
             {token.debtor_signed ? "Yes" : "No"}

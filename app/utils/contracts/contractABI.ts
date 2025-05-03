@@ -209,4 +209,25 @@ export const CONTRACT_ABI = [
     stateMutability: "view",
     type: "function",
   },
+  // 新增函数：purchaseShares
+  {
+      "inputs": [
+          {"internalType": "string", "name": "batchId", "type": "string"},
+          {"internalType": "uint256", "name": "amount", "type": "uint256"},
+      ],
+      "name": "purchaseShares",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function",
+  },
+  // 新增函数：purchaseSharesWithNativeToken
+  {
+      "inputs": [
+          {"internalType": "string", "name": "batchId", "type": "string"},
+      ],
+      "name": "purchaseSharesWithNativeToken",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function",
+  },
 ] as const satisfies Abi;
