@@ -39,6 +39,11 @@ export const darkTheme: ThemeConfig = {
       colorPrimaryHover: "#40a9ff",
       colorText: "#e5e7eb",
       colorBgContainer: "#1a1a1a",
+      boxShadowTertiary: "none",
+      boxShadow: "none !important",
+      boxShadowSecondary: "none",
+      controlOutline: "none",
+      controlOutlineWidth: 0,
     },
     Input: {
       colorBgContainer: "#1a1a1a",

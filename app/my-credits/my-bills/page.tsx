@@ -73,6 +73,7 @@ export default function MyBillsPage() {
       try {
         // This would be replaced with an actual API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
+        // const res = await get;
         setBills(generateMockBills());
       } catch (error) {
         message.error("Failed to load bills");
