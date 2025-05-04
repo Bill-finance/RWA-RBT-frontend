@@ -3,7 +3,7 @@ import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 // http://43.134.99.111:8888/swagger-ui/
 
 const request = axios.create({
-  baseURL: "/api",
+  baseURL: "",
 });
 
 // 请求拦截器

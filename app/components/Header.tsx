@@ -12,6 +12,8 @@ import WalletButton from "./ui/WalletButton";
 
 const menuItems = [
   { name: "Home", path: "/" },
+  { name: "Enterprise", path: "/enterprise" },
+
   {
     name: "My Credits",
     children: [
@@ -28,6 +30,7 @@ const menuItems = [
   },
   { name: "Token Market", path: "/token-market" },
   { name: "My Tokens", path: "/my-tokens" },
+  { name: "TestPage", path: "/testpage" },
 ];
 
 export default function Header() {
