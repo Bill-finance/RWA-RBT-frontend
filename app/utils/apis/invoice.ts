@@ -24,7 +24,7 @@ export interface Invoice {
   is_valid: true;
   payee: "string";
   payer: "string";
-  status: "PENDING";
+  status: "PENDING" | "VERIFIED" | "ISSUED" | "UNISSUED" | "COMPLETED";
   token_batch: "string";
   updated_at: string;
 }
@@ -44,13 +44,13 @@ export interface InvoiceBatch {
 // 票据状态：待上链->已上链->在售
 
 export const invoiceApi = {
-  // ✅
+  // 创建
   create: (data: CreateInvoiceRequest) => {
     return apiRequest.post("/rwa/invoice/create", data);
   },
   // 上链
   verify: (id: string) => {
-    return apiRequest.post(`/rwa/invoice/verify?id=${id}`);
+    return apiRequest.post(`/rwa/invoice/verify`, { id: id });
   },
   // 发布（在售）
   issue: (ids: string[]) => {

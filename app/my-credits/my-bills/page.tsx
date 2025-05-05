@@ -178,6 +178,7 @@ export default function MyBillsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [processingIds, setProcessingIds] = useState<string[]>([]);
 
   const loadInvoices = async () => {
     setIsLoading(true);
@@ -214,9 +215,11 @@ export default function MyBillsPage() {
       return;
     }
 
+    setProcessingIds([...processingIds, ...selectedInvoices]);
+
     try {
       const response = await invoiceApi.issue(selectedInvoices);
-      if (response.code === 0) {
+      if (response.code === 0 || response.code === 200) {
         message.success("Invoices issued successfully");
         await loadInvoices();
         setSelectedInvoices([]);
@@ -226,13 +229,19 @@ export default function MyBillsPage() {
     } catch (error) {
       console.error(error);
       message.error("Failed to issue invoices");
+    } finally {
+      setProcessingIds(
+        processingIds.filter((id) => !selectedInvoices.includes(id))
+      );
     }
   };
 
   const handleVerifyInvoice = async (id: string) => {
+    setProcessingIds([...processingIds, id]);
+
     try {
       const response = await invoiceApi.verify(id);
-      if (response.code === 0) {
+      if (response.code === 0 || response.code === 200) {
         message.success("Invoice verified successfully");
         await loadInvoices();
       } else {
@@ -241,6 +250,8 @@ export default function MyBillsPage() {
     } catch (error) {
       console.error(error);
       message.error("Failed to verify invoice");
+    } finally {
+      setProcessingIds(processingIds.filter((pid) => pid !== id));
     }
   };
 
@@ -251,6 +262,9 @@ export default function MyBillsPage() {
       render: (_: unknown, record: Invoice) => (
         <input
           type="checkbox"
+          disabled={
+            record.status !== "VERIFIED" || processingIds.includes(record.id)
+          }
           checked={selectedInvoices.includes(record.id)}
           onChange={(e) => {
             if (e.target.checked) {
@@ -332,11 +346,25 @@ export default function MyBillsPage() {
             <Button
               type="primary"
               size="small"
+              loading={processingIds.includes(record.id)}
               onClick={() => handleVerifyInvoice(record.id)}
             >
               Verify
             </Button>
           )}
+          {/* {record.status === "VERIFIED" && (
+            <Button
+              type="primary"
+              size="small"
+              loading={processingIds.includes(record.id)}
+              onClick={() => {
+                setSelectedInvoices([record.id]);
+                handleIssueInvoices();
+              }}
+            >
+              Issue
+            </Button>
+          )} */}
         </Space>
       ),
     },
@@ -400,7 +428,13 @@ export default function MyBillsPage() {
             <Button
               type="primary"
               onClick={handleIssueInvoices}
-              disabled={selectedInvoices.length === 0}
+              loading={selectedInvoices.some((id) =>
+                processingIds.includes(id)
+              )}
+              disabled={
+                selectedInvoices.length === 0 ||
+                selectedInvoices.some((id) => processingIds.includes(id))
+              }
             >
               Issue Selected
             </Button>
