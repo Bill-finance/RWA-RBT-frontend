@@ -252,7 +252,7 @@ export default function EnterprisePage() {
       <div className="mb-6 flex items-center justify-between">
         <Title level={2}>Enterprise List</Title>
         <Button type="primary" onClick={handleAdd}>
-          Add Enterprise
+          Connect My Enterprise
         </Button>
       </div>
       <Card className="mb-6">
@@ -305,7 +305,7 @@ export default function EnterprisePage() {
       {/* 新增弹窗 */}
       <Modal
         open={showAddModal}
-        title="Add Enterprise"
+        title="Connect My Enterprise"
         onCancel={() => setShowAddModal(false)}
         onOk={handleAddSubmit}
         okText="Create"

@@ -5,8 +5,12 @@ interface ChallengeRequest {
 }
 
 interface ChallengeResponse {
-  nonce: string;
-  requestId: string;
+  code: number;
+  msg: string;
+  data: {
+    nonce: string;
+    requestId: string;
+  };
 }
 
 interface LoginRequest {
@@ -15,8 +19,12 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  token: string;
-  walletAddress: string;
+  code: number;
+  msg: string;
+  data: {
+    token: string;
+    walletAddress: string;
+  };
 }
 
 export const authApi = {

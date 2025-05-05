@@ -5,11 +5,14 @@ interface EnterpriseCreateRequest {
   walletAddress: string;
 }
 
-interface EnterpriseUpdateRequest {
-  name?: string;
-  walletAddress?: string;
-  status?: string;
-  kycDetailsIpfsHash?: string;
+export interface Enterprise {
+  created_at: string;
+  id: string;
+  kyc_details_ipfs_hash: string;
+  name: string;
+  status: string;
+  updated_at: string;
+  wallet_address: string;
 }
 
 export const enterpriseApi = {
@@ -30,11 +33,15 @@ export const enterpriseApi = {
 
   // ✅
   list: () => {
-    return apiRequest.get("/rwa/enterprise/list");
+    return apiRequest.get<{
+      code: number;
+      data: Enterprise[];
+      msg: string;
+    }>("/rwa/enterprise/list");
   },
 
-  // 因为先测的删除，没测通，不过这个问题不大
-  update: (id: string, data: EnterpriseUpdateRequest) => {
-    return apiRequest.put(`/rwa/enterprise/${id}`, data);
-  },
+  // // 因为先测的删除，没测通，不过这个问题不大
+  // update: (id: string, data: EnterpriseUpdateRequest) => {
+  //   return apiRequest.put(`/rwa/enterprise/${id}`, data);
+  // },
 };

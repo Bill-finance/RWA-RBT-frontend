@@ -16,7 +16,334 @@ export interface InvoiceData {
 
 export const CONTRACT_ABI = [
   {
+    inputs: [],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
+    anonymous: false,
     inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "batchId",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    name: "NativeSharePurchased",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "batchId",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "payer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    name: "NativeInvoiceRepaid",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "previousOwner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
+    ],
+    name: "Paused",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "batchId",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "payer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    name: "InvoiceRepaid",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "batchId",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    name: "SharePurchased",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "batchId",
+        type: "string",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "payee",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "payer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "totalAmount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "minTerm",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "maxTerm",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "interestRate",
+        type: "uint256",
+      },
+    ],
+    name: "TokenBatchCreated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "batchId",
+        type: "string",
+      },
+    ],
+    name: "TokenBatchIssued",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
+    ],
+    name: "Unpaused",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "implementation",
+        type: "address",
+      },
+    ],
+    name: "Upgraded",
+    type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_batchId",
+        type: "string",
+      },
+    ],
+    name: "confirmTokenBatchIssue",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_batchId",
+        type: "string",
+      },
+      {
+        internalType: "string[]",
+        name: "_invoiceNumbers",
+        type: "string[]",
+      },
+      {
+        internalType: "address",
+        name: "_stableToken",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "_minTerm",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_maxTerm",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_interestRate",
+        type: "uint256",
+      },
+    ],
+    name: "createTokenBatch",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_batchId",
+        type: "string",
+      },
+    ],
+    name: "getBatchSoldAmount",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_invoiceNumber",
+        type: "string",
+      },
+    ],
+    name: "getInvoice",
+    outputs: [
       {
         components: [
           {
@@ -45,6 +372,11 @@ export const CONTRACT_ABI = [
             type: "string",
           },
           {
+            internalType: "string",
+            name: "contractHash",
+            type: "string",
+          },
+          {
             internalType: "uint256",
             name: "timestamp",
             type: "uint256",
@@ -55,19 +387,27 @@ export const CONTRACT_ABI = [
             type: "uint256",
           },
           {
+            internalType: "string",
+            name: "tokenBatch",
+            type: "string",
+          },
+          {
+            internalType: "bool",
+            name: "isCleared",
+            type: "bool",
+          },
+          {
             internalType: "bool",
             name: "isValid",
             type: "bool",
           },
         ],
-        internalType: "struct Invoice.InvoiceData[]",
-        name: "_invoices",
-        type: "tuple[]",
+        internalType: "struct Invoice.InvoiceData",
+        name: "",
+        type: "tuple",
       },
     ],
-    name: "batchCreateInvoices",
-    outputs: [],
-    stateMutability: "nonpayable",
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -113,6 +453,11 @@ export const CONTRACT_ABI = [
             type: "string",
           },
           {
+            internalType: "string",
+            name: "contractHash",
+            type: "string",
+          },
+          {
             internalType: "uint256",
             name: "timestamp",
             type: "uint256",
@@ -121,6 +466,16 @@ export const CONTRACT_ABI = [
             internalType: "uint256",
             name: "dueDate",
             type: "uint256",
+          },
+          {
+            internalType: "string",
+            name: "tokenBatch",
+            type: "string",
+          },
+          {
+            internalType: "bool",
+            name: "isCleared",
+            type: "bool",
           },
           {
             internalType: "bool",
@@ -144,7 +499,7 @@ export const CONTRACT_ABI = [
         type: "address",
       },
     ],
-    name: "getUserInvoices",
+    name: "getPayeeInvoices",
     outputs: [
       {
         internalType: "string[]",
@@ -159,75 +514,455 @@ export const CONTRACT_ABI = [
     inputs: [
       {
         internalType: "string",
-        name: "",
+        name: "_batchId",
         type: "string",
       },
     ],
-    name: "invoices",
+    name: "getTokenBatch",
     outputs: [
       {
-        internalType: "string",
-        name: "invoiceNumber",
-        type: "string",
+        components: [
+          {
+            internalType: "string",
+            name: "batchId",
+            type: "string",
+          },
+          {
+            internalType: "address",
+            name: "payee",
+            type: "address",
+          },
+          {
+            internalType: "address",
+            name: "payer",
+            type: "address",
+          },
+          {
+            internalType: "address",
+            name: "stableToken",
+            type: "address",
+          },
+          {
+            internalType: "uint256",
+            name: "minTerm",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "maxTerm",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "interestRate",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "totalAmount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "issueDate",
+            type: "uint256",
+          },
+          {
+            internalType: "bool",
+            name: "isSigned",
+            type: "bool",
+          },
+          {
+            internalType: "bool",
+            name: "isIssued",
+            type: "bool",
+          },
+          {
+            internalType: "string[]",
+            name: "invoiceNumbers",
+            type: "string[]",
+          },
+        ],
+        internalType: "struct Invoice.InvoiceTokenBatch",
+        name: "",
+        type: "tuple",
       },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
       {
         internalType: "address",
-        name: "payee",
+        name: "_user",
+        type: "address",
+      },
+    ],
+    name: "getUserBatches",
+    outputs: [
+      {
+        internalType: "string[]",
+        name: "",
+        type: "string[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_vaultAddress",
         type: "address",
       },
       {
         internalType: "address",
-        name: "payer",
+        name: "_rbtAddress",
         type: "address",
       },
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
+    ],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
       {
         internalType: "string",
-        name: "ipfsHash",
+        name: "_invoiceNumber",
         type: "string",
       },
+    ],
+    name: "invalidateInvoice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [
       {
-        internalType: "uint256",
-        name: "timestamp",
-        type: "uint256",
+        internalType: "address",
+        name: "",
+        type: "address",
       },
-      {
-        internalType: "uint256",
-        name: "dueDate",
-        type: "uint256",
-      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "pause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "paused",
+    outputs: [
       {
         internalType: "bool",
-        name: "isValid",
+        name: "",
         type: "bool",
       },
     ],
     stateMutability: "view",
     type: "function",
   },
-  // 新增函数：purchaseShares
   {
-      "inputs": [
-          {"internalType": "string", "name": "batchId", "type": "string"},
-          {"internalType": "uint256", "name": "amount", "type": "uint256"},
-      ],
-      "name": "purchaseShares",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function",
+    inputs: [
+      {
+        internalType: "string",
+        name: "_batchId",
+        type: "string",
+      },
+      {
+        internalType: "uint256",
+        name: "_amount",
+        type: "uint256",
+      },
+    ],
+    name: "purchaseShares",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
-  // 新增函数：purchaseSharesWithNativeToken
   {
-      "inputs": [
-          {"internalType": "string", "name": "batchId", "type": "string"},
-      ],
-      "name": "purchaseSharesWithNativeToken",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function",
+    inputs: [
+      {
+        internalType: "string",
+        name: "_batchId",
+        type: "string",
+      },
+    ],
+    name: "purchaseSharesWithNativeToken",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
   },
-] as const satisfies Abi;
+  {
+    inputs: [
+      {
+        components: [
+          {
+            internalType: "string",
+            name: "batchId",
+            type: "string",
+          },
+          {
+            internalType: "address",
+            name: "payer",
+            type: "address",
+          },
+          {
+            internalType: "address",
+            name: "payee",
+            type: "address",
+          },
+          {
+            internalType: "string",
+            name: "invoiceNumber",
+            type: "string",
+          },
+          {
+            internalType: "bool",
+            name: "checkValid",
+            type: "bool",
+          },
+        ],
+        internalType: "struct Invoice.QueryParams",
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "queryInvoices",
+    outputs: [
+      {
+        components: [
+          {
+            components: [
+              {
+                internalType: "string",
+                name: "invoiceNumber",
+                type: "string",
+              },
+              {
+                internalType: "address",
+                name: "payee",
+                type: "address",
+              },
+              {
+                internalType: "address",
+                name: "payer",
+                type: "address",
+              },
+              {
+                internalType: "uint256",
+                name: "amount",
+                type: "uint256",
+              },
+              {
+                internalType: "string",
+                name: "ipfsHash",
+                type: "string",
+              },
+              {
+                internalType: "string",
+                name: "contractHash",
+                type: "string",
+              },
+              {
+                internalType: "uint256",
+                name: "timestamp",
+                type: "uint256",
+              },
+              {
+                internalType: "uint256",
+                name: "dueDate",
+                type: "uint256",
+              },
+              {
+                internalType: "string",
+                name: "tokenBatch",
+                type: "string",
+              },
+              {
+                internalType: "bool",
+                name: "isCleared",
+                type: "bool",
+              },
+              {
+                internalType: "bool",
+                name: "isValid",
+                type: "bool",
+              },
+            ],
+            internalType: "struct Invoice.InvoiceData[]",
+            name: "invoices",
+            type: "tuple[]",
+          },
+          {
+            internalType: "uint256",
+            name: "total",
+            type: "uint256",
+          },
+        ],
+        internalType: "struct Invoice.QueryResult",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_batchId",
+        type: "string",
+      },
+      {
+        internalType: "uint256",
+        name: "_amount",
+        type: "uint256",
+      },
+    ],
+    name: "repayInvoice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_batchId",
+        type: "string",
+      },
+    ],
+    name: "repayInvoiceWithNativeToken",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "transferOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "unpause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "newImplementation",
+        type: "address",
+      },
+    ],
+    name: "upgradeTo",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "newImplementation",
+        type: "address",
+      },
+      {
+        internalType: "bytes",
+        name: "data",
+        type: "bytes",
+      },
+    ],
+    name: "upgradeToAndCall",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "token",
+        type: "address",
+      },
+    ],
+    name: "withdraw",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "token",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "deadline",
+        type: "uint256",
+      },
+      {
+        internalType: "uint8",
+        name: "v",
+        type: "uint8",
+      },
+      {
+        internalType: "bytes32",
+        name: "r",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes32",
+        name: "s",
+        type: "bytes32",
+      },
+    ],
+    name: "withdrawWithPermit",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const as Abi;
