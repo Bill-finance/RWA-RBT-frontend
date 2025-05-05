@@ -3,7 +3,7 @@ import { apiRequest } from "./request";
 export interface CreateInvoiceRequest {
   payee: string;
   payer: string;
-  amount: string;
+  amount: number;
   invoice_ipfs_hash: string;
   contract_ipfs_hash: string;
   due_date: string;
@@ -63,7 +63,11 @@ export const invoiceApi = {
 
   // 所有票据
   list: () => {
-    return apiRequest.get<Invoice[]>("/rwa/invoice/list");
+    return apiRequest.get<{
+      code: number;
+      msg: string;
+      data: Invoice[];
+    }>("/rwa/invoice/list");
   },
 
   // 删除票据

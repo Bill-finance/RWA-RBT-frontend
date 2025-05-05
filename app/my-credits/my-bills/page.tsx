@@ -14,60 +14,250 @@ import {
   Tag,
   message,
   Card,
+  Form,
+  DatePicker,
 } from "antd";
-import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
-import { transactionApi, TransactionRecord } from "@/app/utils/apis";
+import { SearchOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { invoiceApi, Invoice, CreateInvoiceRequest } from "@/app/utils/apis";
 
 const { Title } = Typography;
 
+// 创建票据弹窗组件
+const CreateInvoiceModal = ({
+  open,
+  onCancel,
+  onSuccess,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onSuccess: () => void;
+}) => {
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 重置所有状态
+  const handleCancel = () => {
+    setError(null);
+    form.resetFields();
+    onCancel();
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+      setError(null);
+
+      const requestData: CreateInvoiceRequest = {
+        ...values,
+        amount: Number(values.amount),
+        due_date: Math.floor(values.due_date.valueOf() / 1000),
+      };
+
+      const response = await invoiceApi.create(requestData);
+
+      if (response.code === 0 || response.code === 200) {
+        form.resetFields();
+        setError(null);
+        onSuccess();
+      } else {
+        setError(response.msg || "Failed to create invoice");
+      }
+    } catch (err: unknown) {
+      console.error("Form validation or submission failed:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An error occurred while creating the invoice"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 每次打开时重置状态
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      form.resetFields();
+    }
+  }, [open, form]);
+
+  return (
+    <Modal
+      title="Create New Invoice"
+      open={open}
+      onCancel={handleCancel}
+      destroyOnClose
+      footer={[
+        <Button key="cancel" onClick={handleCancel}>
+          Cancel
+        </Button>,
+        <Button
+          key="submit"
+          type="primary"
+          danger={!!error}
+          loading={submitting}
+          onClick={handleSubmit}
+        >
+          {error ? "Retry" : "Create"}
+        </Button>,
+      ]}
+    >
+      {error && (
+        <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-red-600">
+          {error}
+        </div>
+      )}
+      <Form form={form} layout="vertical" initialValues={{ currency: "USD" }}>
+        <Form.Item
+          name="payee"
+          label="Payee Address"
+          rules={[{ required: true, message: "Please enter payee address" }]}
+        >
+          <Input placeholder="Enter payee wallet address" />
+        </Form.Item>
+        <Form.Item
+          name="payer"
+          label="Payer Address"
+          rules={[{ required: true, message: "Please enter payer address" }]}
+        >
+          <Input placeholder="Enter payer wallet address" />
+        </Form.Item>
+        <Form.Item
+          name="amount"
+          label="Amount"
+          rules={[{ required: true, message: "Please enter amount" }]}
+        >
+          <Input type="number" placeholder="Enter amount" />
+        </Form.Item>
+        <Form.Item
+          name="currency"
+          label="Currency"
+          rules={[{ required: true, message: "Please enter currency" }]}
+        >
+          <Input placeholder="Enter currency (e.g., USD)" />
+        </Form.Item>
+        <Form.Item
+          name="due_date"
+          label="Due Date"
+          rules={[{ required: true, message: "Please select due date" }]}
+        >
+          <DatePicker style={{ width: "100%" }} />
+        </Form.Item>
+        <Form.Item
+          name="invoice_ipfs_hash"
+          label="Invoice IPFS Hash"
+          rules={[
+            { required: true, message: "Please enter invoice IPFS hash" },
+          ]}
+        >
+          <Input placeholder="Enter invoice IPFS hash" />
+        </Form.Item>
+        <Form.Item
+          name="contract_ipfs_hash"
+          label="Contract IPFS Hash"
+          rules={[
+            { required: true, message: "Please enter contract IPFS hash" },
+          ]}
+        >
+          <Input placeholder="Enter contract IPFS hash" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 export default function MyBillsPage() {
-  const { address, isConnected } = useAccount();
-  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const { isConnected } = useAccount();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] =
-    useState<TransactionRecord | null>(null);
-  const [selectedTransactions, setSelectedTransactions] = useState<string[]>(
-    []
-  );
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+
+  const loadInvoices = async () => {
+    setIsLoading(true);
+    try {
+      const response = await invoiceApi.list();
+      if (response.code === 200) {
+        setInvoices(response.data);
+      } else {
+        Modal.error({
+          title: "Failed to load invoices",
+          content: response.msg || "Could not retrieve invoices data",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      Modal.error({
+        title: "Error",
+        content: "Failed to load invoices. Please try again later.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadTransactions = async () => {
-      setIsLoading(true);
-      try {
-        const response = await transactionApi.list();
-        if (response.code === 0) {
-          setTransactions(response.data);
-        } else {
-          message.error(response.msg || "Failed to load transactions");
-        }
-      } catch (error) {
-        message.error("Failed to load transactions");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (isConnected) {
-      loadTransactions();
+      loadInvoices();
     }
   }, [isConnected]);
+
+  const handleIssueInvoices = async () => {
+    if (selectedInvoices.length === 0) {
+      message.warning("Please select at least one invoice to issue");
+      return;
+    }
+
+    try {
+      const response = await invoiceApi.issue(selectedInvoices);
+      if (response.code === 0) {
+        message.success("Invoices issued successfully");
+        await loadInvoices();
+        setSelectedInvoices([]);
+      } else {
+        message.error(response.msg || "Failed to issue invoices");
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to issue invoices");
+    }
+  };
+
+  const handleVerifyInvoice = async (id: string) => {
+    try {
+      const response = await invoiceApi.verify(id);
+      if (response.code === 0) {
+        message.success("Invoice verified successfully");
+        await loadInvoices();
+      } else {
+        message.error(response.msg || "Failed to verify invoice");
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to verify invoice");
+    }
+  };
 
   const columns = [
     {
       title: "Select",
       key: "select",
-      render: (_: any, record: TransactionRecord) => (
+      render: (_: unknown, record: Invoice) => (
         <input
           type="checkbox"
-          checked={selectedTransactions.includes(record.id)}
+          checked={selectedInvoices.includes(record.id)}
           onChange={(e) => {
             if (e.target.checked) {
-              setSelectedTransactions([...selectedTransactions, record.id]);
+              setSelectedInvoices([...selectedInvoices, record.id]);
             } else {
-              setSelectedTransactions(
-                selectedTransactions.filter((id) => id !== record.id)
+              setSelectedInvoices(
+                selectedInvoices.filter((id) => id !== record.id)
               );
             }
           }}
@@ -75,45 +265,61 @@ export default function MyBillsPage() {
       ),
     },
     {
-      title: "Transaction ID",
+      title: "Invoice ID",
       dataIndex: "id",
       key: "id",
-      render: (text: string, record: TransactionRecord) => (
+      render: (text: string, record: Invoice) => (
         <a onClick={() => handleViewDetail(record)}>{text}</a>
       ),
+    },
+    {
+      title: "Invoice Number",
+      dataIndex: "invoice_number",
+      key: "invoice_number",
     },
     {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
-      render: (text: string) => `$${Number(text).toLocaleString()}`,
+      render: (amount: number) => `$${Number(amount).toLocaleString()}`,
     },
     {
-      title: "Type",
-      dataIndex: "transaction_type",
-      key: "transaction_type",
+      title: "Currency",
+      dataIndex: "currency",
+      key: "currency",
+    },
+    {
+      title: "Payee",
+      dataIndex: "payee",
+      key: "payee",
       render: (text: string) => (
-        <Tag color={text === "CREDIT" ? "green" : "blue"}>{text}</Tag>
+        <Tooltip title={text}>
+          <span>{text.slice(0, 10)}...</span>
+        </Tooltip>
       ),
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (text: string) => (
-        <Tag color={text === "COMPLETED" ? "green" : "orange"}>{text}</Tag>
-      ),
+      render: (text: string) => {
+        let color = "default";
+        if (text === "PENDING") color = "orange";
+        if (text === "VERIFIED") color = "blue";
+        if (text === "ISSUED") color = "green";
+        return <Tag color={color}>{text}</Tag>;
+      },
     },
     {
-      title: "Date",
-      dataIndex: "transaction_date",
-      key: "transaction_date",
-      render: (text: string) => new Date(text).toLocaleDateString(),
+      title: "Due Date",
+      dataIndex: "due_date",
+      key: "due_date",
+      render: (timestamp: number) => new Date(timestamp).toLocaleDateString(),
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_: any, record: TransactionRecord) => (
+      render: (_: unknown, record: Invoice) => (
         <Space>
           <Tooltip title="View Details">
             <Button
@@ -122,6 +328,15 @@ export default function MyBillsPage() {
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
+          {record.status === "PENDING" && (
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => handleVerifyInvoice(record.id)}
+            >
+              Verify
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -131,97 +346,156 @@ export default function MyBillsPage() {
     setSearchText(e.target.value);
   };
 
-  const handleViewDetail = (transaction: TransactionRecord) => {
-    setSelectedTransaction(transaction);
-    setShowDetailModal(true);
+  const handleViewDetail = async (invoice: Invoice) => {
+    try {
+      // Get invoice details
+      const response = await invoiceApi.detail(invoice.invoice_number);
+      if (response.code === 0) {
+        setSelectedInvoice({ ...invoice, ...response.data });
+      } else {
+        setSelectedInvoice(invoice);
+      }
+      setShowDetailModal(true);
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to load invoice details");
+      setSelectedInvoice(invoice);
+      setShowDetailModal(true);
+    }
   };
 
-  const filteredTransactions = transactions.filter(
-    (transaction) =>
-      transaction.id.toLowerCase().includes(searchText.toLowerCase()) ||
-      transaction.transaction_type
-        .toLowerCase()
-        .includes(searchText.toLowerCase())
+  const filteredInvoices = invoices.filter(
+    (invoice) =>
+      invoice.id.toLowerCase().includes(searchText.toLowerCase()) ||
+      invoice.invoice_number.toLowerCase().includes(searchText.toLowerCase()) ||
+      invoice.status.toLowerCase().includes(searchText.toLowerCase())
   );
+
+  // 清除状态并关闭模态窗
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedInvoice(null);
+  };
+
+  // 清除状态并关闭创建票据模态窗
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="bg-zinc-900 border-zinc-800 shadow-lg mb-8">
         <div className="flex justify-between items-center mb-6">
           <Title level={2} style={{ color: "white", margin: 0 }}>
-            My Bills
+            My Invoices
           </Title>
           <Space>
             <Input
-              placeholder="Search transactions..."
+              placeholder="Search invoices..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={handleSearch}
               style={{ width: 250 }}
             />
+            <Button
+              type="primary"
+              onClick={handleIssueInvoices}
+              disabled={selectedInvoices.length === 0}
+            >
+              Issue Selected
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setShowCreateModal(true)}
+            >
+              Create Invoice
+            </Button>
           </Space>
         </div>
 
         <Table
           columns={columns}
-          dataSource={filteredTransactions}
+          dataSource={filteredInvoices}
           rowKey="id"
           loading={isLoading}
           pagination={{ pageSize: 10 }}
         />
       </Card>
 
-      {/* Transaction Detail Modal */}
+      {/* Invoice Detail Modal */}
       <Modal
-        title="Transaction Details"
+        destroyOnClose
+        title="Invoice Details"
         open={showDetailModal}
-        onCancel={() => {
-          setShowDetailModal(false);
-          setSelectedTransaction(null);
-        }}
+        onCancel={handleCloseDetailModal}
         footer={[
-          <Button
-            key="close"
-            onClick={() => {
-              setShowDetailModal(false);
-              setSelectedTransaction(null);
-            }}
-          >
+          <Button key="close" onClick={handleCloseDetailModal}>
             Close
           </Button>,
         ]}
       >
-        {selectedTransaction && (
+        {selectedInvoice && (
           <div>
             <p>
-              <strong>Transaction ID:</strong> {selectedTransaction.id}
+              <strong>Invoice ID:</strong> {selectedInvoice.id}
+            </p>
+            <p>
+              <strong>Invoice Number:</strong> {selectedInvoice.invoice_number}
             </p>
             <p>
               <strong>Amount:</strong> $
-              {Number(selectedTransaction.amount).toLocaleString()}
+              {Number(selectedInvoice.amount).toLocaleString()}
             </p>
             <p>
-              <strong>Type:</strong> {selectedTransaction.transaction_type}
+              <strong>Currency:</strong> {selectedInvoice.currency}
             </p>
             <p>
-              <strong>Status:</strong> {selectedTransaction.status}
+              <strong>Status:</strong> {selectedInvoice.status}
             </p>
             <p>
-              <strong>Date:</strong>{" "}
-              {new Date(selectedTransaction.transaction_date).toLocaleString()}
+              <strong>Due Date:</strong>{" "}
+              {new Date(selectedInvoice.due_date).toLocaleDateString()}
             </p>
             <p>
-              <strong>Holding ID:</strong> {selectedTransaction.holding_id}
+              <strong>Payee:</strong> {selectedInvoice.payee}
             </p>
             <p>
-              <strong>Invoice ID:</strong> {selectedTransaction.invoice_id}
+              <strong>Payer:</strong> {selectedInvoice.payer}
             </p>
             <p>
-              <strong>User ID:</strong> {selectedTransaction.user_id}
+              <strong>Contract IPFS Hash:</strong>{" "}
+              {selectedInvoice.contract_ipfs_hash}
             </p>
+            <p>
+              <strong>Invoice IPFS Hash:</strong>{" "}
+              {selectedInvoice.invoice_ipfs_hash}
+            </p>
+            <p>
+              <strong>Created At:</strong>{" "}
+              {new Date(selectedInvoice.created_at).toLocaleString()}
+            </p>
+            {selectedInvoice.blockchain_timestamp && (
+              <p>
+                <strong>Blockchain Timestamp:</strong>{" "}
+                {new Date(
+                  selectedInvoice.blockchain_timestamp
+                ).toLocaleString()}
+              </p>
+            )}
           </div>
         )}
       </Modal>
+
+      {/* Create Invoice Modal */}
+      <CreateInvoiceModal
+        open={showCreateModal}
+        onCancel={handleCloseCreateModal}
+        onSuccess={() => {
+          setShowCreateModal(false);
+          loadInvoices();
+        }}
+      />
     </div>
   );
 }
