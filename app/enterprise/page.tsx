@@ -13,7 +13,7 @@ import {
   Button,
 } from "antd";
 import { useEffect, useState } from "react";
-import { EyeOutlined } from "@ant-design/icons";
+import { EditOutlined } from "@ant-design/icons";
 import { enterpriseApi } from "../utils/apis";
 import { EnterpriseResponse } from "./types";
 
@@ -223,11 +223,11 @@ export default function EnterprisePage() {
         <Space>
           <Tooltip title="View Details">
             <Button
-              icon={<EyeOutlined />}
+              icon={<EditOutlined />}
               onClick={() => handleDetail(record)}
             />
           </Tooltip>
-          <Tooltip title="Edit">
+          {/* <Tooltip title="Edit">
             <Button
               onClick={async () => {
                 await handleDetail(record);
@@ -236,7 +236,7 @@ export default function EnterprisePage() {
             >
               Edit
             </Button>
-          </Tooltip>
+          </Tooltip> */}
           <Tooltip title="Delete">
             <Button danger onClick={() => handleDelete(record)}>
               Delete
