@@ -5,6 +5,7 @@ import { Web3Modal } from "./components/Web3Modal";
 import Header from "./components/Header";
 import ThemeProvider from "./components/ThemeProvider";
 import { App as AntdApp } from "antd";
+import { MessageProviderWithHandler } from "./components/Message";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,8 +25,10 @@ export default function RootLayout({
         <Web3Modal>
           <ThemeProvider>
             <AntdApp>
-            <Header />
-            <main className="pt-16">{children}</main>
+              <MessageProviderWithHandler>
+                <Header />
+                <main className="pt-16">{children}</main>
+              </MessageProviderWithHandler>
             </AntdApp>
           </ThemeProvider>
         </Web3Modal>

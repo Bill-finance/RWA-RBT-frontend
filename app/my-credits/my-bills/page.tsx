@@ -1,6 +1,7 @@
 "use client";
 // 我的票据
-
+import { useInvoice } from "@/app/utils/contracts/useInvoice";
+// import { useBatchInvoices } from "@/app/utils/contracts/useBatchInvoices";
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import {
@@ -12,13 +13,13 @@ import {
   Typography,
   Space,
   Tag,
-  message,
   Card,
   Form,
   DatePicker,
 } from "antd";
 import { SearchOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { invoiceApi, Invoice, CreateInvoiceRequest } from "@/app/utils/apis";
+import { message } from "@/app/components/Message";
 
 const { Title } = Typography;
 
@@ -179,6 +180,10 @@ export default function MyBillsPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [processingIds, setProcessingIds] = useState<string[]>([]);
+  const { useBatchCreateInvoices } = useInvoice();
+  // const { getInvoiceDetails } = useBatchInvoices();
+  const { batchCreateInvoices, isPending, isSuccess, error } =
+    useBatchCreateInvoices();
 
   const loadInvoices = async () => {
     setIsLoading(true);
@@ -236,10 +241,43 @@ export default function MyBillsPage() {
     }
   };
 
-  const handleVerifyInvoice = async (id: string) => {
-    setProcessingIds([...processingIds, id]);
+  const handleVerifyInvoice = async (invoiceNumber: string, id: string) => {
+    setProcessingIds([...processingIds, invoiceNumber]);
 
     try {
+      // 1. 获取票据详情
+      const res = await invoiceApi.detail(invoiceNumber);
+      if (!res || res.code !== 200) {
+        throw new Error("Invoice not found");
+      }
+      const invoice = res.data[0];
+
+      // 2. 准备合约数据 - 修改为匹配 InvoiceData 类型
+      const invoiceData = {
+        invoice_number: invoice.invoice_number,
+        payee: invoice.payee as `0x${string}`,
+        payer: invoice.payer as `0x${string}`,
+        amount: Number(invoice.amount),
+        ipfs_hash: invoice.invoice_ipfs_hash,
+        contract_hash: invoice.contract_ipfs_hash,
+        timestamp: Math.floor(Date.now() / 1000),
+        due_date: invoice.due_date,
+        token_batch: "",
+        is_cleared: false,
+        is_valid: false,
+      };
+
+      // TODO：目前的 abi 中似乎移除了这个函数
+      console.log("start to invoke contract", invoice, invoiceData);
+      // 3. 调用合约的 batchCreateInvoices 函数
+      await batchCreateInvoices([invoiceData]);
+      // 等待交易完成
+      while (isPending) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      if (error) throw new Error("Transaction failed");
+
+      // 4. 合约交易成功后，调用后端 API 更新状态
       const response = await invoiceApi.verify(id);
       if (response.code === 0 || response.code === 200) {
         message.success("Invoice verified successfully");
@@ -347,7 +385,9 @@ export default function MyBillsPage() {
               type="primary"
               size="small"
               loading={processingIds.includes(record.id)}
-              onClick={() => handleVerifyInvoice(record.id)}
+              onClick={() =>
+                handleVerifyInvoice(record.invoice_number, record.id)
+              }
             >
               Verify
             </Button>

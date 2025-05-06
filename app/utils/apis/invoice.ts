@@ -79,9 +79,11 @@ export const invoiceApi = {
 
   // 查看票据本身的详情（点击按钮后调用）
   detail: (invoiceNumber: string) => {
-    return apiRequest.get(
-      `/rwa/invoice/detail?invoice_number=${invoiceNumber}`
-    );
+    return apiRequest.get<{
+      code: number;
+      msg: string;
+      data: Invoice[];
+    }>(`/rwa/invoice/detail?invoice_number=${invoiceNumber}`);
   },
 
   // 利息详情，通过持有人id查询？

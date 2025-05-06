@@ -13,7 +13,7 @@ import { isAuthenticated, logout } from "../utils/auth";
 import { authApi } from "../utils/apis";
 
 const menuItems = [
-  { name: "Home", path: "/" },
+  // { name: "Home", path: "/" },
   { name: "Enterprise", path: "/enterprise" },
 
   {
@@ -32,7 +32,7 @@ const menuItems = [
   },
   { name: "Token Market", path: "/token-market" },
   { name: "My Tokens", path: "/my-tokens" },
-  { name: "TestPage", path: "/testpage" },
+  // { name: "TestPage", path: "/testpage" },
 ];
 
 export default function Header() {
