@@ -1,7 +1,6 @@
 "use client";
 // 我的票据
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
-// import { useBatchInvoices } from "@/app/utils/contracts/useBatchInvoices";
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import {
@@ -14,161 +13,13 @@ import {
   Space,
   Tag,
   Card,
-  Form,
-  DatePicker,
 } from "antd";
 import { SearchOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
-import { invoiceApi, Invoice, CreateInvoiceRequest } from "@/app/utils/apis";
+import { invoiceApi, Invoice } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
+import CreateInvoiceModal from "./components/CreateInvoiceModal";
 
 const { Title } = Typography;
-
-// 创建票据弹窗组件
-const CreateInvoiceModal = ({
-  open,
-  onCancel,
-  onSuccess,
-}: {
-  open: boolean;
-  onCancel: () => void;
-  onSuccess: () => void;
-}) => {
-  const [form] = Form.useForm();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // 重置所有状态
-  const handleCancel = () => {
-    setError(null);
-    form.resetFields();
-    onCancel();
-  };
-
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      setSubmitting(true);
-      setError(null);
-
-      const requestData: CreateInvoiceRequest = {
-        ...values,
-        amount: Number(values.amount),
-        due_date: Math.floor(values.due_date.valueOf() / 1000),
-      };
-
-      const response = await invoiceApi.create(requestData);
-
-      if (response.code === 0 || response.code === 200) {
-        form.resetFields();
-        setError(null);
-        onSuccess();
-      } else {
-        setError(response.msg || "Failed to create invoice");
-      }
-    } catch (err: unknown) {
-      console.error("Form validation or submission failed:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred while creating the invoice"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // 每次打开时重置状态
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      form.resetFields();
-    }
-  }, [open, form]);
-
-  return (
-    <Modal
-      title="Create New Invoice"
-      open={open}
-      onCancel={handleCancel}
-      destroyOnClose
-      footer={[
-        <Button key="cancel" onClick={handleCancel}>
-          Cancel
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          danger={!!error}
-          loading={submitting}
-          onClick={handleSubmit}
-        >
-          {error ? "Retry" : "Create"}
-        </Button>,
-      ]}
-    >
-      {error && (
-        <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-red-600">
-          {error}
-        </div>
-      )}
-      <Form form={form} layout="vertical" initialValues={{ currency: "USD" }}>
-        <Form.Item
-          name="payee"
-          label="Payee Address"
-          rules={[{ required: true, message: "Please enter payee address" }]}
-        >
-          <Input placeholder="Enter payee wallet address" />
-        </Form.Item>
-        <Form.Item
-          name="payer"
-          label="Payer Address"
-          rules={[{ required: true, message: "Please enter payer address" }]}
-        >
-          <Input placeholder="Enter payer wallet address" />
-        </Form.Item>
-        <Form.Item
-          name="amount"
-          label="Amount"
-          rules={[{ required: true, message: "Please enter amount" }]}
-        >
-          <Input type="number" placeholder="Enter amount" />
-        </Form.Item>
-        <Form.Item
-          name="currency"
-          label="Currency"
-          rules={[{ required: true, message: "Please enter currency" }]}
-        >
-          <Input placeholder="Enter currency (e.g., USD)" />
-        </Form.Item>
-        <Form.Item
-          name="due_date"
-          label="Due Date"
-          rules={[{ required: true, message: "Please select due date" }]}
-        >
-          <DatePicker style={{ width: "100%" }} />
-        </Form.Item>
-        <Form.Item
-          name="invoice_ipfs_hash"
-          label="Invoice IPFS Hash"
-          rules={[
-            { required: true, message: "Please enter invoice IPFS hash" },
-          ]}
-        >
-          <Input placeholder="Enter invoice IPFS hash" />
-        </Form.Item>
-        <Form.Item
-          name="contract_ipfs_hash"
-          label="Contract IPFS Hash"
-          rules={[
-            { required: true, message: "Please enter contract IPFS hash" },
-          ]}
-        >
-          <Input placeholder="Enter contract IPFS hash" />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-};
 
 export default function MyBillsPage() {
   const { isConnected } = useAccount();
@@ -242,7 +93,8 @@ export default function MyBillsPage() {
   };
 
   const handleVerifyInvoice = async (invoiceNumber: string, id: string) => {
-    setProcessingIds([...processingIds, invoiceNumber]);
+    // 立即设置 loading 状态，防止重复点击
+    setProcessingIds([...processingIds, id]);
 
     try {
       // 1. 获取票据详情
@@ -252,46 +104,93 @@ export default function MyBillsPage() {
       }
       const invoice = res.data[0];
 
-      // 2. 准备合约数据 - 修改为匹配 InvoiceData 类型
+      // 2. 准备合约数据
       const invoiceData = {
         invoice_number: invoice.invoice_number,
         payee: invoice.payee as `0x${string}`,
         payer: invoice.payer as `0x${string}`,
-        amount: Number(invoice.amount),
+        amount: invoice.amount.toString(),
         ipfs_hash: invoice.invoice_ipfs_hash,
         contract_hash: invoice.contract_ipfs_hash,
-        timestamp: Math.floor(Date.now() / 1000),
-        due_date: invoice.due_date,
-        token_batch: "",
-        is_cleared: false,
-        is_valid: false,
+        timestamp: Math.floor(Date.now() / 1000).toString(),
+        due_date: invoice.due_date.toString(),
+        token_batch: invoice.token_batch || "",
+        is_cleared: invoice.is_cleared,
+        is_valid: invoice.is_valid,
       };
 
-      // TODO：目前的 abi 中似乎移除了这个函数
-      console.log("start to invoke contract", invoice, invoiceData);
       // 3. 调用合约的 batchCreateInvoices 函数
-      await batchCreateInvoices([invoiceData]);
-      // 等待交易完成
-      while (isPending) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        await batchCreateInvoices([invoiceData]);
+      } catch (error: unknown) {
+        // 检查是否是用户取消
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === 4001
+        ) {
+          message.error("User cancelled the transaction");
+          // 用户取消时也需要清除 loading 状态
+          setProcessingIds(processingIds.filter((pid) => pid !== id));
+          return;
+        }
+        throw error; // 重新抛出其他错误
       }
-      if (error) throw new Error("Transaction failed");
 
-      // 4. 合约交易成功后，调用后端 API 更新状态
-      const response = await invoiceApi.verify(id);
-      if (response.code === 0 || response.code === 200) {
-        message.success("Invoice verified successfully");
-        await loadInvoices();
-      } else {
-        message.error(response.msg || "Failed to verify invoice");
+      // 4. 等待交易完成
+      if (isPending) {
+        // 如果交易还在进行中，直接返回
+        // 后续的状态变化会由 useEffect 处理
+        return;
       }
     } catch (error) {
       console.error(error);
-      message.error("Failed to verify invoice");
-    } finally {
+      message.error(
+        error instanceof Error ? error.message : "Failed to verify invoice"
+      );
+      // 发生错误时清除 loading 状态
       setProcessingIds(processingIds.filter((pid) => pid !== id));
     }
   };
+
+  // 监听交易状态变化
+  useEffect(() => {
+    const handleTransactionComplete = async () => {
+      if (!isPending && isSuccess) {
+        try {
+          // 获取当前正在处理的票据ID
+          const currentProcessingId = processingIds[0];
+          if (!currentProcessingId) return;
+
+          // 调用后端 API 更新状态
+          const response = await invoiceApi.verify(currentProcessingId);
+          if (response.code === 0 || response.code === 200) {
+            message.success("Invoice verified successfully");
+            await loadInvoices();
+          } else {
+            throw new Error(response.msg || "Failed to verify invoice");
+          }
+        } catch (error) {
+          console.error("API verification failed:", error);
+          message.error(
+            error instanceof Error ? error.message : "Failed to verify invoice"
+          );
+        } finally {
+          // 清除处理中的ID
+          setProcessingIds(processingIds.slice(1));
+        }
+      } else if (!isPending && error) {
+        // 交易失败
+        console.error("Transaction failed:", error);
+        message.error(error.message || "Transaction failed");
+        // 清除处理中的ID
+        setProcessingIds(processingIds.slice(1));
+      }
+    };
+
+    handleTransactionComplete();
+  }, [isPending, isSuccess, error, processingIds]);
 
   const columns = [
     {

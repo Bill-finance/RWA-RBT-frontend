@@ -43,28 +43,13 @@ export const useInvoice = () => {
           payer: invoice.payer,
           amount: BigInt(invoice.amount),
           ipfsHash: invoice.ipfs_hash,
+          contractHash: invoice.contract_hash || "",
           timestamp: BigInt(invoice.timestamp),
           dueDate: BigInt(invoice.due_date),
-          isValid: invoice.is_valid,
+          tokenBatch: invoice.token_batch || "",
+          isCleared: Boolean(invoice.is_cleared),
+          isValid: Boolean(invoice.is_valid),
         }));
-
-        // const demo = [
-        //   {
-        //     invoice_number: "INV1745507470",
-        //     payee: "0x360a0E35B3e3b678069E3E84c20889A9399A3fF7",
-        //     payer: "0x360a0E35B3e3b678069E3E84c20889A9399A3fF7",
-        //     amount: "1000000000000000000",
-        //     ipfs_hash: "QmExample1",
-        //     contract_hash: "0x1234567890abcdef",
-        //     timestamp: "1745507470",
-        //     due_date: "1748099470",
-        //     token_batch: "",
-        //     is_cleared: false,
-        //     is_valid: false,
-        //   },
-        // ];
-
-        // console.log("invoices form data", transformedInvoices);
 
         console.log("Chain and contract info:", {
           chainId: currentChainId,
