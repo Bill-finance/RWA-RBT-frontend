@@ -2,19 +2,19 @@
 
 import { Modal, Button, Typography, InputNumber, Form, App } from "antd";
 import { useState } from "react";
-import { TokenMarketData } from "../../utils/apis/token";
+import { UserHoldingTokenData } from "../../utils/apis/token";
 import { usePurchase } from "@/app/utils/contracts/usePurchase";
 
 const { Text, Title } = Typography;
 
 interface Props {
   open: boolean;
-  token: TokenMarketData | null;
+  token: UserHoldingTokenData | null;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export default function TokenPurchaseModal({
+export default function TokenRepurchaseModal({
   open,
   token,
   onClose,
@@ -45,7 +45,7 @@ export default function TokenPurchaseModal({
 
   return (
     <Modal
-      title="Purchase Token"
+      title="Repurchase Token"
       open={open}
       onCancel={onClose}
       footer={[
@@ -68,15 +68,14 @@ export default function TokenPurchaseModal({
           <Title level={5}>Purchase Info</Title>
           <Text>Token Batch: {token.batch_reference}</Text>
           <br />
-          <Text>Available: {token.available_token_amount}</Text>
+          <Text>Current Value: {token.current_value}</Text>
           <br />
-          <Text>Stablecoin: {token.stablecoin_symbol}</Text>
+          <Text>Status: {token.status}</Text>
 
           <Form form={form} layout="vertical" className="mt-4">
             <Form.Item label="Purchase Amount">
               <InputNumber
                 min={1}
-                max={Number(token.available_token_amount)}
                 value={amount}
                 onChange={(v) => setAmount(v || 0)}
                 style={{ width: "100%" }}

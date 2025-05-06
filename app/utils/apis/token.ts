@@ -1,59 +1,66 @@
 import { apiRequest } from "./request";
 
 export interface TokenMarketData {
-  id: string;
-  token_batch: string;
-  creditor_name: string;
+  available_token_amount: string;
+  batch_reference: string;
   creditor_address: string;
-  debtor_name: string;
   debtor_address: string;
-  stablecoin: string;
-  total_amount: number;
-  available_amount: number;
-  sold_amount: number;
-  interest_rate: number;
-  maturity_date: string;
-  risk_rating: number;
-  status: "active" | "fully_sold" | "expired";
+  id: string;
+  remaining_transaction_amount: string;
+  sold_token_amount: string;
+  stablecoin_symbol: string;
+  token_value_per_unit: string;
+  total_token_amount: string;
+}
+
+export interface UserHoldingTokenData {
+  batch_reference: string;
+  current_value: string;
+  id: string;
+  purchase_date: string;
+  purchase_value: string;
+  status: string;
+  token_amount: string;
 }
 
 export interface TokenPurchaseRequest {
-  token_batch: string;
-  amount: number;
-  buyer_address: string;
+  batch_id: string;
+  token_amount: string;
+}
+
+interface ApiResponse<T> {
+  code: number;
+  data: T;
+  msg: string;
 }
 
 export const tokenApi = {
-  // Get all available tokens in the market
-  list: () => {
-    return apiRequest.get<{
-      code: number;
-      data: TokenMarketData[];
-      msg: string;
-    }>("/rwa/token/market");
+  getTokenMarketList: (params?: {
+    tokenType?: string;
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const queryParams = new URLSearchParams({
+      page: String(params?.page || 1),
+      pageSize: String(params?.pageSize || 10),
+      ...(params?.tokenType ? { tokenType: params.tokenType } : {}),
+    });
+
+    return apiRequest.get<ApiResponse<TokenMarketData[]>>(
+      `/rwa/token/markets?${queryParams.toString()}`
+    );
   },
 
-  // Purchase tokens
   purchase: (data: TokenPurchaseRequest) => {
-    return apiRequest.post<{ code: number; data: any; msg: string }>(
+    return apiRequest.post<ApiResponse<{ holding_id: string }>>(
       "/rwa/token/purchase",
       data
     );
   },
 
-  // Get token details by batch number
-  getByBatch: (batchNumber: string) => {
-    return apiRequest.get<{ code: number; data: TokenMarketData; msg: string }>(
-      `/rwa/token/detail?batch=${batchNumber}`
+  getHolding: () => {
+    return apiRequest.get<ApiResponse<UserHoldingTokenData[]>>(
+      "/rwa/token/holdings"
     );
-  },
-
-  // Get my purchased tokens
-  getMyTokens: () => {
-    return apiRequest.get<{
-      code: number;
-      data: TokenMarketData[];
-      msg: string;
-    }>("/rwa/token/my");
   },
 };
