@@ -13,11 +13,13 @@ import {
   Space,
   Tag,
   Card,
+  Descriptions,
 } from "antd";
 import { SearchOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { invoiceApi, Invoice } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import CreateInvoiceModal from "./components/CreateInvoiceModal";
+import dayjs from "dayjs";
 
 const { Title } = Typography;
 
@@ -192,6 +194,13 @@ export default function MyBillsPage() {
     handleTransactionComplete();
   }, [isPending, isSuccess, error, processingIds]);
 
+  const formatTimestamp = (timestamp: number) => {
+    if (!timestamp || timestamp === 0) {
+      return "Not set";
+    }
+    return dayjs(timestamp * 1000).format("YYYY-MM-DD HH:mm");
+  };
+
   const columns = [
     {
       title: "Select",
@@ -265,7 +274,7 @@ export default function MyBillsPage() {
       title: "Due Date",
       dataIndex: "due_date",
       key: "due_date",
-      render: (timestamp: number) => new Date(timestamp).toLocaleDateString(),
+      render: (timestamp: number) => formatTimestamp(timestamp),
     },
     {
       title: "Actions",
@@ -402,6 +411,7 @@ export default function MyBillsPage() {
         title="Invoice Details"
         open={showDetailModal}
         onCancel={handleCloseDetailModal}
+        width={800}
         footer={[
           <Button key="close" onClick={handleCloseDetailModal}>
             Close
@@ -409,54 +419,73 @@ export default function MyBillsPage() {
         ]}
       >
         {selectedInvoice && (
-          <div>
-            <p>
-              <strong>Invoice ID:</strong> {selectedInvoice.id}
-            </p>
-            <p>
-              <strong>Invoice Number:</strong> {selectedInvoice.invoice_number}
-            </p>
-            <p>
-              <strong>Amount:</strong> $
-              {Number(selectedInvoice.amount).toLocaleString()}
-            </p>
-            <p>
-              <strong>Currency:</strong> {selectedInvoice.currency}
-            </p>
-            <p>
-              <strong>Status:</strong> {selectedInvoice.status}
-            </p>
-            <p>
-              <strong>Due Date:</strong>{" "}
-              {new Date(selectedInvoice.due_date).toLocaleDateString()}
-            </p>
-            <p>
-              <strong>Payee:</strong> {selectedInvoice.payee}
-            </p>
-            <p>
-              <strong>Payer:</strong> {selectedInvoice.payer}
-            </p>
-            <p>
-              <strong>Contract IPFS Hash:</strong>{" "}
-              {selectedInvoice.contract_ipfs_hash}
-            </p>
-            <p>
-              <strong>Invoice IPFS Hash:</strong>{" "}
-              {selectedInvoice.invoice_ipfs_hash}
-            </p>
-            <p>
-              <strong>Created At:</strong>{" "}
-              {new Date(selectedInvoice.created_at).toLocaleString()}
-            </p>
+          <Descriptions
+            bordered
+            column={2}
+            size="small"
+            labelStyle={{ fontWeight: "bold" }}
+          >
+            <Descriptions.Item label="Invoice ID" span={2}>
+              {selectedInvoice.id}
+            </Descriptions.Item>
+            <Descriptions.Item label="Invoice Number" span={2}>
+              {selectedInvoice.invoice_number}
+            </Descriptions.Item>
+            <Descriptions.Item label="Amount">
+              ${Number(selectedInvoice.amount).toLocaleString()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Currency">
+              {selectedInvoice.currency}
+            </Descriptions.Item>
+            <Descriptions.Item label="Status">
+              <Tag
+                color={
+                  selectedInvoice.status === "PENDING"
+                    ? "orange"
+                    : selectedInvoice.status === "VERIFIED"
+                    ? "blue"
+                    : selectedInvoice.status === "ISSUED"
+                    ? "green"
+                    : "default"
+                }
+              >
+                {selectedInvoice.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Due Date">
+              {formatTimestamp(selectedInvoice.due_date)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Payee" span={2}>
+              <Tooltip title={selectedInvoice.payee}>
+                {selectedInvoice.payee}
+              </Tooltip>
+            </Descriptions.Item>
+            <Descriptions.Item label="Payer" span={2}>
+              <Tooltip title={selectedInvoice.payer}>
+                {selectedInvoice.payer}
+              </Tooltip>
+            </Descriptions.Item>
+            <Descriptions.Item label="Contract IPFS Hash" span={2}>
+              <Tooltip title={selectedInvoice.contract_ipfs_hash}>
+                {selectedInvoice.contract_ipfs_hash}
+              </Tooltip>
+            </Descriptions.Item>
+            <Descriptions.Item label="Invoice IPFS Hash" span={2}>
+              <Tooltip title={selectedInvoice.invoice_ipfs_hash}>
+                {selectedInvoice.invoice_ipfs_hash}
+              </Tooltip>
+            </Descriptions.Item>
+            <Descriptions.Item label="Created At" span={2}>
+              {dayjs(selectedInvoice.created_at).format("YYYY-MM-DD HH:mm:ss")}
+            </Descriptions.Item>
             {selectedInvoice.blockchain_timestamp && (
-              <p>
-                <strong>Blockchain Timestamp:</strong>{" "}
-                {new Date(
-                  selectedInvoice.blockchain_timestamp
-                ).toLocaleString()}
-              </p>
+              <Descriptions.Item label="Blockchain Timestamp" span={2}>
+                {dayjs(selectedInvoice.blockchain_timestamp).format(
+                  "YYYY-MM-DD HH:mm:ss"
+                )}
+              </Descriptions.Item>
             )}
-          </div>
+          </Descriptions>
         )}
       </Modal>
 

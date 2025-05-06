@@ -522,6 +522,7 @@ export default function TestPage() {
       title: "Due Date",
       dataIndex: "due_date",
       key: "due_date",
+      render: () => 123,
     },
     {
       title: "Created At",
