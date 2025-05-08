@@ -24,9 +24,16 @@ pnpm i
 
 找到根目录下的 .env 文件(没有那就创建一个，放到 .env.sample 同一级目录即可)，填入对应的链地址和id：
 
+
+
 ```txt
+
 # Contract Addresses
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x8890386170F6c976Fdb781B757F9b6B66CC0Cf31
+# 之前的版本：NEXT_PUBLIC_CONTRACT_ADDRESS=0x8890386170F6c976Fdb781B757F9b6B66CC0Cf31
+# 更新为：
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x3fdBBc8074978c7fd8941efB71d1a8d71327E1C1
+
+# 合约地址https://explorer.sepolia.mantle.xyz/address/0x3fdBBc8074978c7fd8941efB71d1a8d71327E1C1
 
 # Network Configuration
 NEXT_PUBLIC_CHAIN_ID=5003   

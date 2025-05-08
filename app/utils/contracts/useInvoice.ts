@@ -37,19 +37,25 @@ export const useInvoice = () => {
         });
 
         // Transform invoices to match contract format
-        const transformedInvoices = invoices.map((invoice) => ({
-          invoiceNumber: invoice.invoice_number,
-          payee: invoice.payee,
-          payer: invoice.payer,
-          amount: BigInt(invoice.amount),
-          ipfsHash: invoice.ipfs_hash,
-          contractHash: invoice.contract_hash || "",
-          timestamp: BigInt(invoice.timestamp),
-          dueDate: BigInt(invoice.due_date),
-          tokenBatch: invoice.token_batch || "",
-          isCleared: Boolean(invoice.is_cleared),
-          isValid: Boolean(invoice.is_valid),
-        }));
+        const transformedInvoices = invoices.map((invoice) => {
+          const res = {
+            invoiceNumber: invoice.invoice_number,
+            payee: invoice.payee,
+            payer: invoice.payer,
+            amount: BigInt(invoice.amount),
+            ipfsHash: invoice.ipfs_hash,
+            contractHash: invoice.contract_hash || "",
+            timestamp: BigInt(invoice.timestamp),
+            dueDate: BigInt(invoice.due_date),
+            tokenBatch: invoice.token_batch || "",
+            isCleared: Boolean(invoice.is_cleared),
+            isValid: Boolean(invoice.is_valid),
+          };
+
+          console.log("res????", res);
+
+          return res;
+        });
 
         console.log("Chain and contract info:", {
           chainId: currentChainId,
@@ -76,6 +82,13 @@ export const useInvoice = () => {
           }
         }
 
+        const params = {
+          abi: contractAbi,
+          address: contractAddress as `0x${string}`,
+          functionName: "batchCreateInvoices",
+          args: [transformedInvoices],
+        };
+
         // Add detailed logging
         console.log("Transformed invoices detail:", transformedInvoices);
 
@@ -85,12 +98,7 @@ export const useInvoice = () => {
           args: [transformedInvoices],
         });
 
-        const result = await writeContract({
-          abi: contractAbi,
-          address: contractAddress as `0x${string}`,
-          functionName: "batchCreateInvoices",
-          args: [transformedInvoices],
-        });
+        const result = await writeContract(params);
 
         console.log("Transaction hash:", result);
         return result;

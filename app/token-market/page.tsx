@@ -1,10 +1,11 @@
 "use client";
 
-import { Table, Card, Space, Button, Tooltip, message, Typography } from "antd";
+import { Table, Card, Space, Button, Tooltip, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { ShoppingCartOutlined } from "@ant-design/icons";
 import { tokenApi, TokenMarketData } from "../utils/apis/token";
 import TokenPurchaseModal from "./components/TokenPurchaseModal";
+import { message } from "../components/Message";
 
 const { Title } = Typography;
 
@@ -42,6 +43,7 @@ export default function TokenMarketPage() {
         message.error(response.msg || "Failed to load token list");
       }
     } catch (err) {
+      console.error(err);
       message.error("Failed to load token list");
     } finally {
       setIsLoading(false);

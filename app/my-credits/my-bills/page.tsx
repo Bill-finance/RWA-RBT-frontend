@@ -165,11 +165,28 @@ export default function MyBillsPage() {
           const currentProcessingId = processingIds[0];
           if (!currentProcessingId) return;
 
-          // 调用后端 API 更新状态
+          // 1. 调用后端 API 更新状态
           const response = await invoiceApi.verify(currentProcessingId);
           if (response.code === 0 || response.code === 200) {
-            message.success("Invoice verified successfully");
-            await loadInvoices();
+            // 2. 获取票据详情以确认上链状态
+            const detailResponse = await invoiceApi.detail(
+              response.data.invoice_number
+            );
+            if (detailResponse.code === 200 && detailResponse.data[0]) {
+              const invoiceDetail = detailResponse.data[0];
+              console.log("invoiceDetail", invoiceDetail);
+              // 3. 检查上链状态
+              if (invoiceDetail.blockchain_timestamp) {
+                message.success("Invoice verified and confirmed on blockchain");
+                await loadInvoices();
+              } else {
+                message.warning(
+                  "Transaction submitted but not yet confirmed on blockchain"
+                );
+              }
+            } else {
+              throw new Error("Failed to get invoice details");
+            }
           } else {
             throw new Error(response.msg || "Failed to verify invoice");
           }
@@ -179,20 +196,20 @@ export default function MyBillsPage() {
             error instanceof Error ? error.message : "Failed to verify invoice"
           );
         } finally {
-          // 清除处理中的ID
-          setProcessingIds(processingIds.slice(1));
+          // 使用函数式更新来避免依赖 processingIds
+          setProcessingIds((prev) => prev.slice(1));
         }
       } else if (!isPending && error) {
         // 交易失败
         console.error("Transaction failed:", error);
         message.error(error.message || "Transaction failed");
-        // 清除处理中的ID
-        setProcessingIds(processingIds.slice(1));
+        // 使用函数式更新来避免依赖 processingIds
+        setProcessingIds((prev) => prev.slice(1));
       }
     };
 
     handleTransactionComplete();
-  }, [isPending, isSuccess, error, processingIds]);
+  }, [isPending, isSuccess, error]); // 移除 processingIds 依赖
 
   const formatTimestamp = (timestamp: number) => {
     if (!timestamp || timestamp === 0) {
@@ -224,14 +241,14 @@ export default function MyBillsPage() {
         />
       ),
     },
-    {
-      title: "Invoice ID",
-      dataIndex: "id",
-      key: "id",
-      render: (text: string, record: Invoice) => (
-        <a onClick={() => handleViewDetail(record)}>{text}</a>
-      ),
-    },
+    // {
+    //   title: "Invoice ID",
+    //   dataIndex: "id",
+    //   key: "id",
+    //   render: (text: string, record: Invoice) => (
+    //     <a onClick={() => handleViewDetail(record)}>{text}</a>
+    //   ),
+    // },
     {
       title: "Invoice Number",
       dataIndex: "invoice_number",
@@ -324,12 +341,13 @@ export default function MyBillsPage() {
 
   const handleViewDetail = async (invoice: Invoice) => {
     try {
-      // Get invoice details
+      // Get invoice details with blockchain status
       const response = await invoiceApi.detail(invoice.invoice_number);
-      if (response.code === 0) {
-        setSelectedInvoice({ ...invoice, ...response.data });
+      if (response.code === 200 && response.data[0]) {
+        setSelectedInvoice({ ...invoice, ...response.data[0] });
       } else {
         setSelectedInvoice(invoice);
+        message.warning("Could not fetch latest blockchain status");
       }
       setShowDetailModal(true);
     } catch (error) {
@@ -420,10 +438,10 @@ export default function MyBillsPage() {
       >
         {selectedInvoice && (
           <Descriptions
+            styles={{ label: { fontWeight: "bold" } }}
             bordered
             column={2}
             size="small"
-            labelStyle={{ fontWeight: "bold" }}
           >
             <Descriptions.Item label="Invoice ID" span={2}>
               {selectedInvoice.id}
@@ -467,24 +485,55 @@ export default function MyBillsPage() {
             </Descriptions.Item>
             <Descriptions.Item label="Contract IPFS Hash" span={2}>
               <Tooltip title={selectedInvoice.contract_ipfs_hash}>
-                {selectedInvoice.contract_ipfs_hash}
+                {selectedInvoice.contract_ipfs_hash || "Not available"}
               </Tooltip>
             </Descriptions.Item>
             <Descriptions.Item label="Invoice IPFS Hash" span={2}>
               <Tooltip title={selectedInvoice.invoice_ipfs_hash}>
-                {selectedInvoice.invoice_ipfs_hash}
+                {selectedInvoice.invoice_ipfs_hash || "Not available"}
               </Tooltip>
             </Descriptions.Item>
             <Descriptions.Item label="Created At" span={2}>
               {dayjs(selectedInvoice.created_at).format("YYYY-MM-DD HH:mm:ss")}
             </Descriptions.Item>
-            {selectedInvoice.blockchain_timestamp && (
-              <Descriptions.Item label="Blockchain Timestamp" span={2}>
-                {dayjs(selectedInvoice.blockchain_timestamp).format(
-                  "YYYY-MM-DD HH:mm:ss"
-                )}
-              </Descriptions.Item>
-            )}
+            <Descriptions.Item label="Updated At" span={2}>
+              {dayjs(selectedInvoice.updated_at).format("YYYY-MM-DD HH:mm:ss")}
+            </Descriptions.Item>
+            <Descriptions.Item label="Blockchain Status" span={2}>
+              {selectedInvoice.blockchain_timestamp ? (
+                <Space>
+                  <Tag color="green">Confirmed</Tag>
+                  <span>
+                    {dayjs(selectedInvoice.blockchain_timestamp).format(
+                      "YYYY-MM-DD HH:mm:ss"
+                    )}
+                  </span>
+                </Space>
+              ) : (
+                <Tag color="orange">Pending Confirmation</Tag>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Token Batch" span={2}>
+              {selectedInvoice.token_batch || "Not available"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Cleared Status" span={2}>
+              {selectedInvoice.is_cleared === true ? (
+                <Tag color="green">Cleared</Tag>
+              ) : selectedInvoice.is_cleared === false ? (
+                <Tag color="red">Not Cleared</Tag>
+              ) : (
+                "Not available"
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Valid Status" span={2}>
+              {selectedInvoice.is_valid === true ? (
+                <Tag color="green">Valid</Tag>
+              ) : selectedInvoice.is_valid === false ? (
+                <Tag color="red">Invalid</Tag>
+              ) : (
+                "Not available"
+              )}
+            </Descriptions.Item>
           </Descriptions>
         )}
       </Modal>

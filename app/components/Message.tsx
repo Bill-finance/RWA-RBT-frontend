@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useState, useCallback, useContext } from "react";
+import React, {
+  createContext,
+  useState,
+  useCallback,
+  useContext,
+  useEffect,
+} from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 
@@ -34,18 +40,28 @@ declare global {
 // Message Provider 组件
 export function MessageProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<MessageInstance[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
-  const addMessage = useCallback((message: Omit<MessageInstance, "key">) => {
-    const key = Math.random().toString(36).substring(7);
-    setMessages((prev) => [...prev, { ...message, key }]);
-
-    // 添加自动移除定时器
-    if (message.duration !== 0) {
-      setTimeout(() => {
-        setMessages((prev) => prev.filter((msg) => msg.key !== key));
-      }, (message.duration || 5000) + 300); // 等待显示时间 + 退出动画时间
-    }
+  // 使用 useEffect 来处理客户端初始化
+  useEffect(() => {
+    setIsClient(true);
   }, []);
+
+  const addMessage = useCallback(
+    (message: Omit<MessageInstance, "key">) => {
+      // 使用时间戳和递增计数器来生成稳定的 key
+      const key = `msg_${Date.now()}_${messages.length}`;
+      setMessages((prev) => [...prev, { ...message, key }]);
+
+      // 添加自动移除定时器
+      if (message.duration !== 0) {
+        setTimeout(() => {
+          setMessages((prev) => prev.filter((msg) => msg.key !== key));
+        }, (message.duration || 5000) + 300); // 等待显示时间 + 退出动画时间
+      }
+    },
+    [messages.length]
+  );
 
   const removeMessage = useCallback((key: string) => {
     setMessages((prev) => prev.filter((msg) => msg.key !== key));
@@ -60,7 +76,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       value={{ addMessage, removeMessage, removeAllMessages }}
     >
       {children}
-      {typeof window !== "undefined" &&
+      {isClient &&
         createPortal(
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-3">
             {messages.map((message) => (
@@ -101,38 +117,60 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 }
 
 // 添加全局样式
-if (typeof window !== "undefined" && window.document) {
-  const style = window.document.createElement("style");
-  style.textContent = `
-    @keyframes messageEnter {
-      0% {
-        opacity: 0;
-        transform: translateY(-40px) scale(0.95);
+const MessageStyles = () => {
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes messageEnter {
+        0% {
+          opacity: 0;
+          transform: translateY(-40px) scale(0.95);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
-      100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+    
+      @keyframes messageExit {
+        0% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-40px) scale(0.95);
+        }
       }
-    }
-  
-    @keyframes messageExit {
-      0% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+    
+      .animate-message {
+        animation: 
+          messageEnter 0.3s ease-out forwards,
+          messageExit 0.3s ease-in forwards 2.3s;
       }
-      100% {
-        opacity: 0;
-        transform: translateY(-40px) scale(0.95);
-      }
-    }
-  
-    .animate-message {
-      animation: 
-        messageEnter 0.3s ease-out forwards,
-        messageExit 0.3s ease-in forwards 2.3s;
-    }
-  `;
-  window.document.head.appendChild(style);
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  return null;
+};
+
+// 修改 MessageProvider 组件以包含 MessageHandler 和 MessageStyles
+export function MessageProviderWithHandler({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <MessageProvider>
+      <MessageHandler />
+      <MessageStyles />
+      {children}
+    </MessageProvider>
+  );
 }
 
 // 使用 Message 的 Hook
@@ -234,20 +272,6 @@ function MessageHandler() {
   }, [addMessage, removeAllMessages]);
 
   return null;
-}
-
-// 修改 MessageProvider 组件以包含 MessageHandler
-export function MessageProviderWithHandler({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <MessageProvider>
-      <MessageHandler />
-      {children}
-    </MessageProvider>
-  );
 }
 
 export { message };
