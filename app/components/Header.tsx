@@ -99,10 +99,14 @@ export default function Header() {
         }
         console.log("Nonce to sign:", challengeRes.data.nonce);
 
-        // 直接使用 wagmi 的 signMessageAsync
         const signature = await signMessageAsync({
           message: challengeRes.data.nonce,
+          account: address, // 明确指定账户
+        }).catch((error) => {
+          console.error("Signature error:", error);
+          throw new Error(`Failed to sign message: ${error.message}`);
         });
+
         console.log("Signature:", signature);
 
         if (!signature) {
