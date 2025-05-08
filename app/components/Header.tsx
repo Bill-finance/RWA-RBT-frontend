@@ -79,7 +79,6 @@ export default function Header() {
     try {
       setIsAuthenticating(true);
 
-      // 显示签名请求提示
       message.loading({
         content:
           "Please sign the message in your wallet to verify your identity...",
@@ -87,18 +86,18 @@ export default function Header() {
         duration: 0,
       });
 
-      // 尝试调试问题
       try {
         // 检查 address 是否有效
         console.log("Address:", address);
 
-        // 首先获取 challenge
+        // 获取 challenge
         const challengeRes = await authApi.generateChallenge({ address });
         console.log("Challenge Response:", challengeRes);
 
         if (!challengeRes || !challengeRes.data.nonce) {
           throw new Error("Failed to generate challenge");
         }
+        console.log("Nonce to sign:", challengeRes.data.nonce);
 
         // 直接使用 wagmi 的 signMessageAsync
         const signature = await signMessageAsync({
@@ -248,7 +247,6 @@ export default function Header() {
     });
   };
 
-  // Wallet connection component
   const WalletConnection = () => {
     if (!mounted) {
       // 占位符

@@ -101,39 +101,38 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 }
 
 // 添加全局样式
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes messageEnter {
-    0% {
-      opacity: 0;
-      transform: translateY(-40px) scale(0.95);
+if (typeof window !== "undefined" && window.document) {
+  const style = window.document.createElement("style");
+  style.textContent = `
+    @keyframes messageEnter {
+      0% {
+        opacity: 0;
+        transform: translateY(-40px) scale(0.95);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
+  
+    @keyframes messageExit {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-40px) scale(0.95);
+      }
     }
-  }
-
-  @keyframes messageExit {
-    0% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
+  
+    .animate-message {
+      animation: 
+        messageEnter 0.3s ease-out forwards,
+        messageExit 0.3s ease-in forwards 2.3s;
     }
-    100% {
-      opacity: 0;
-      transform: translateY(-40px) scale(0.95);
-    }
-  }
-
-  .animate-message {
-    animation: 
-      messageEnter 0.3s ease-out forwards,
-      messageExit 0.3s ease-in forwards 2.3s;
-  }
-`;
-
-if (typeof window !== "undefined") {
-  document.head.appendChild(style);
+  `;
+  window.document.head.appendChild(style);
 }
 
 // 使用 Message 的 Hook
