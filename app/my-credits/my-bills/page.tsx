@@ -168,25 +168,33 @@ export default function MyBillsPage() {
           // 1. 调用后端 API 更新状态
           const response = await invoiceApi.verify(currentProcessingId);
           if (response.code === 0 || response.code === 200) {
-            // 2. 获取票据详情以确认上链状态
-            const detailResponse = await invoiceApi.detail(
-              response.data.invoice_number
-            );
-            if (detailResponse.code === 200 && detailResponse.data[0]) {
-              const invoiceDetail = detailResponse.data[0];
-              console.log("invoiceDetail", invoiceDetail);
-              // 3. 检查上链状态
-              if (invoiceDetail.blockchain_timestamp) {
-                message.success("Invoice verified and confirmed on blockchain");
-                await loadInvoices();
-              } else {
-                message.warning(
-                  "Transaction submitted but not yet confirmed on blockchain"
-                );
-              }
+            if (response.data.verified === "VERIFIED") {
+              message.success("Invoice verified and confirmed on blockchain");
             } else {
-              throw new Error("Failed to get invoice details");
+              message.warning(
+                "Transaction submitted but not yet confirmed on blockchain"
+              );
             }
+            await loadInvoices();
+            // 2. 获取票据详情以确认上链状态
+            // const detailResponse = await invoiceApi.detail(
+            //   response.data.invoice_number
+            // );
+            // if (detailResponse.code === 200 && detailResponse.data[0]) {
+            //   const invoiceDetail = detailResponse.data[0];
+            //   console.log("invoiceDetail", invoiceDetail);
+            //   // 3. 检查上链状态
+            //   if (invoiceDetail.blockchain_timestamp) {
+            //     message.success("Invoice verified and confirmed on blockchain");
+            //     await loadInvoices();
+            //   } else {
+            //     message.warning(
+            //       "Transaction submitted but not yet confirmed on blockchain"
+            //     );
+            //   }
+            // } else {
+            //   throw new Error("Failed to get invoice details");
+            // }
           } else {
             throw new Error(response.msg || "Failed to verify invoice");
           }
@@ -499,20 +507,15 @@ export default function MyBillsPage() {
             <Descriptions.Item label="Updated At" span={2}>
               {dayjs(selectedInvoice.updated_at).format("YYYY-MM-DD HH:mm:ss")}
             </Descriptions.Item>
-            <Descriptions.Item label="Blockchain Status" span={2}>
-              {selectedInvoice.blockchain_timestamp ? (
+            {/* <Descriptions.Item label="Blockchain Status" span={2}>
+              {selectedInvoice.status === "VERIFIED" ? (
                 <Space>
-                  <Tag color="green">Confirmed</Tag>
-                  <span>
-                    {dayjs(selectedInvoice.blockchain_timestamp).format(
-                      "YYYY-MM-DD HH:mm:ss"
-                    )}
-                  </span>
+                  <Tag color="green">Verified</Tag>
                 </Space>
               ) : (
                 <Tag color="orange">Pending Confirmation</Tag>
               )}
-            </Descriptions.Item>
+            </Descriptions.Item> */}
             <Descriptions.Item label="Token Batch" span={2}>
               {selectedInvoice.token_batch || "Not available"}
             </Descriptions.Item>
