@@ -11,35 +11,35 @@ export interface CreateInvoiceRequest {
 }
 
 export interface Invoice {
-  amount: 0;
-  blockchain_timestamp: "string";
-  contract_ipfs_hash: "string";
-  created_at: "2025-05-05T17:29:52.360Z";
-  currency: "string";
-  due_date: 9007199254740991;
-  id: "string";
-  invoice_ipfs_hash: "string";
-  invoice_number: "string";
-  is_cleared: true;
-  is_valid: true;
-  payee: "string";
-  payer: "string";
+  amount: number;
+  blockchain_timestamp: string;
+  contract_ipfs_hash: string;
+  created_at: string;
+  currency: string;
+  due_date: number;
+  id: string;
+  invoice_ipfs_hash: string;
+  invoice_number: string;
+  is_cleared: boolean;
+  is_valid: boolean;
+  payee: string;
+  payer: string;
   status: "PENDING" | "VERIFIED" | "ISSUED" | "UNISSUED" | "COMPLETED";
-  token_batch: "string";
+  token_batch: string;
   updated_at: string;
 }
 
-export interface InvoiceBatch {
-  accepted_currency: string;
-  created_at: string;
-  creditor_name: string;
-  debtor_name: string;
-  id: string;
-  invoice_count: number;
-  status: string;
-  token_batch_id: string;
-  total_amount: number;
-}
+// export interface InvoiceBatch {
+//   accepted_currency: string;
+//   created_at: string;
+//   creditor_name: string;
+//   debtor_name: string;
+//   id: string;
+//   invoice_count: number;
+//   status: string;
+//   token_batch_id: string;
+//   total_amount: number;
+// }
 
 // 票据状态：待上链->已上链->在售
 
@@ -101,19 +101,19 @@ export const invoiceApi = {
   //   return apiRequest.get(`/rwa/invoice/query?invoice_number=${invoiceNumber}`);
   // },
 
-  batch: {
-    getDetailOfBatch: (batchId: string) => {
-      return apiRequest.get(`/rwa/invoice/batch/${batchId}`);
-    },
+  // batch: {
+  //   getDetailOfBatch: (batchId: string) => {
+  //     return apiRequest.get(`/rwa/invoice/batch/${batchId}`);
+  //   },
 
-    getInvoicesInBatch: (batchId: string) => {
-      return apiRequest.get<Invoice[]>(
-        `/rwa/invoice/batch/${batchId}/invoices`
-      );
-    },
+  //   getInvoicesInBatch: (batchId: string) => {
+  //     return apiRequest.get<Invoice[]>(
+  //       `/rwa/invoice/batch/${batchId}/invoices`
+  //     );
+  //   },
 
-    getBatchOfCurrentUser: () => {
-      return apiRequest.get<InvoiceBatch[]>("/rwa/invoice/batches");
-    },
-  },
+  //   getBatchOfCurrentUser: () => {
+  //     return apiRequest.get<InvoiceBatch[]>("/rwa/invoice/batches");
+  //   },
+  // },
 };

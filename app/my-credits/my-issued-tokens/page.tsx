@@ -23,7 +23,6 @@ import {
 
 const { Title } = Typography;
 
-// Mock data for tokens
 interface Token {
   id: string;
   tokenBatchNumber: string;

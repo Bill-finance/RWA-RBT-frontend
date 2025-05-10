@@ -58,9 +58,17 @@ export const tokenApi = {
     );
   },
 
+  /** 查询当前用户持有的代币 */
   getHolding: () => {
     return apiRequest.get<ApiResponse<UserHoldingTokenData[]>>(
       "/rwa/token/holdings"
     );
+  },
+  /** 创建代币批次——从票据批次创建
+   * !只有管理员 or 债权人才能创建 */
+  createToken: (batchId: string) => {
+    return apiRequest.post("/rwa/token/from_invoice_batch", {
+      invoice_batch_id: batchId,
+    });
   },
 };

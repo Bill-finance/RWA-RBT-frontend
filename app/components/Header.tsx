@@ -19,8 +19,9 @@ const menuItems = [
   {
     name: "My Credits",
     children: [
-      { name: "My Bills", path: "/my-credits/my-bills" },
-      { name: "My Issued Tokens", path: "/my-credits/my-issued-tokens" },
+      { name: "Bills", path: "/my-credits/my-bills" },
+      { name: "Processing Batches", path: "/my-credits/my-processing-batches" },
+      { name: "Issued Tokens", path: "/my-credits/my-issued-tokens" },
     ],
   },
   {
