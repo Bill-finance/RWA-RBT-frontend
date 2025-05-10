@@ -16,7 +16,7 @@ import {
 } from "antd";
 import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
 // import { invoiceBatchApi, InvoiceBatch, Invoice } from "@/app/utils/apis";
-import { InvoiceBatch, Invoice } from "@/app/utils/apis";
+import { InvoiceBatch, Invoice, invoiceBatchApi } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import dayjs from "dayjs";
 
@@ -113,16 +113,16 @@ export default function MyProcessingBatchesPage() {
     setIsLoading(true);
     try {
       // Mock API call
-      // const response = await invoiceBatchApi.list();
-      // if (response.code === 200) {
-      //   setBatches(response.data);
-      // } else {
-      //   message.error(response.msg || "Could not retrieve batches data");
-      // }
+      const response = await invoiceBatchApi.list();
+      if (response.code === 200) {
+        setBatches(response.data);
+      } else {
+        message.error(response.msg || "Could not retrieve batches data");
+      }
 
       // Using mock data instead
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
-      setBatches(mockBatches);
+      // await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
+      // setBatches(mockBatches);
     } catch (error) {
       console.error(error);
       message.error("Failed to load batches. Please try again later.");
@@ -140,20 +140,21 @@ export default function MyProcessingBatchesPage() {
   const handleViewDetail = async (batch: InvoiceBatch) => {
     try {
       // Mock API call
-      // const [batchDetailResponse, invoicesResponse] = await invoiceBatchApi.detail(Number(batch.id));
-      // if (batchDetailResponse.code === 200 && invoicesResponse.code === 200) {
-      //   setSelectedBatch(batch);
-      //   setSelectedBatchInvoices(invoicesResponse.data);
-      //   setShowDetailModal(true);
-      // } else {
-      //   message.warning("Could not fetch batch details");
-      // }
+      const [batchDetailResponse, invoicesResponse] =
+        await invoiceBatchApi.detail(Number(batch.id));
+      if (batchDetailResponse.code === 200 && invoicesResponse.code === 200) {
+        setSelectedBatch(batch);
+        setSelectedBatchInvoices(invoicesResponse.data);
+        setShowDetailModal(true);
+      } else {
+        message.warning("Could not fetch batch details");
+      }
 
       // Using mock data instead
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
-      setSelectedBatch(batch);
-      setSelectedBatchInvoices(mockInvoices);
-      setShowDetailModal(true);
+      // await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
+      // setSelectedBatch(batch);
+      // setSelectedBatchInvoices(mockInvoices);
+      // setShowDetailModal(true);
     } catch (error) {
       console.error(error);
       message.error("Failed to load batch details");

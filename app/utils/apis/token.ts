@@ -66,9 +66,11 @@ export const tokenApi = {
   },
   /** 创建代币批次——从票据批次创建
    * !只有管理员 or 债权人才能创建 */
-  createToken: (batchId: string) => {
+  createTokenFromBatch: (batchId: string) => {
     return apiRequest.post("/rwa/token/from_invoice_batch", {
       invoice_batch_id: batchId,
     });
   },
+
+  createToken: () => {},
 };
