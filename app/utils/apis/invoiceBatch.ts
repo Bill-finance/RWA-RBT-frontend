@@ -19,20 +19,20 @@ export const invoiceBatchApi = {
       code: number;
       msg: string;
       data: InvoiceBatch[];
-    }>("/rwa/invoice/batches"),
+    }>("/rwa/batch/list"),
 
-  detail: (batchId: number) => {
+  detail: (batchId: string) => {
     const batchDetailPromise = apiRequest.get<{
       code: number;
       msg: string;
       data: Invoice[];
-    }>(`/rwa/invoice/batch/${batchId}`);
+    }>(`/rwa/batch/detail?id=${batchId}`);
 
     const invoiceDetailPromise = apiRequest.get<{
       code: number;
       msg: string;
       data: Invoice[];
-    }>(`/rwa/invoice/batch/${batchId}/invoices`);
+    }>(`/rwa/batch/invoices?id=${batchId}`);
 
     return Promise.all([batchDetailPromise, invoiceDetailPromise]);
   },

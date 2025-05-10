@@ -13,7 +13,7 @@ import {
   Button,
 } from "antd";
 import { useEffect, useState } from "react";
-import { EditOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
 import { enterpriseApi } from "../utils/apis";
 import { EnterpriseResponse } from "./types";
 
@@ -223,7 +223,7 @@ export default function EnterprisePage() {
         <Space>
           <Tooltip title="View Details">
             <Button
-              icon={<EditOutlined />}
+              icon={<EyeOutlined />}
               onClick={() => handleDetail(record)}
             />
           </Tooltip>
@@ -238,9 +238,11 @@ export default function EnterprisePage() {
             </Button>
           </Tooltip> */}
           <Tooltip title="Delete">
-            <Button danger onClick={() => handleDelete(record)}>
-              Delete
-            </Button>
+            <Button
+              icon={<DeleteOutlined />}
+              danger
+              onClick={() => handleDelete(record)}
+            />
           </Tooltip>
         </Space>
       ),

@@ -15,7 +15,13 @@ import {
   Card,
   Descriptions,
 } from "antd";
-import { SearchOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  CheckOutlined,
+  SendOutlined,
+} from "@ant-design/icons";
 import { invoiceApi, Invoice } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import CreateInvoiceModal from "./components/CreateInvoiceModal";
@@ -314,16 +320,16 @@ export default function MyBillsPage() {
             />
           </Tooltip>
           {record.status === "PENDING" && (
-            <Button
-              type="primary"
-              size="small"
-              loading={processingIds.includes(record.id)}
-              onClick={() =>
-                handleVerifyInvoice(record.invoice_number, record.id)
-              }
-            >
-              Verify
-            </Button>
+            <Tooltip title="Verify">
+              <Button
+                icon={<CheckOutlined />}
+                type="text"
+                loading={processingIds.includes(record.id)}
+                onClick={() =>
+                  handleVerifyInvoice(record.invoice_number, record.id)
+                }
+              />
+            </Tooltip>
           )}
           {/* {record.status === "VERIFIED" && (
             <Button
@@ -409,6 +415,7 @@ export default function MyBillsPage() {
                 selectedInvoices.length === 0 ||
                 selectedInvoices.some((id) => processingIds.includes(id))
               }
+              icon={<SendOutlined rotate={-45} />}
             >
               Issue Selected
             </Button>

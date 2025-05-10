@@ -7,96 +7,19 @@ import {
   Table,
   Input,
   Tooltip,
-  Modal,
   Typography,
   Space,
   Tag,
   Card,
-  Descriptions,
 } from "antd";
-import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
-// import { invoiceBatchApi, InvoiceBatch, Invoice } from "@/app/utils/apis";
+import { SearchOutlined, EyeOutlined, SendOutlined } from "@ant-design/icons";
 import { InvoiceBatch, Invoice, invoiceBatchApi } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import dayjs from "dayjs";
+import BatchDetailModal from "./components/BatchDetailModal";
+import IssueTokenModal from "./components/IssueTokenModal";
 
 const { Title } = Typography;
-
-// Mock data for testing
-const mockBatches: InvoiceBatch[] = [
-  {
-    id: "BATCH001",
-    creditor_name: "ABC Company",
-    debtor_name: "XYZ Corp",
-    invoice_count: 5,
-    total_amount: 50000,
-    accepted_currency: "USD",
-    status: "PENDING",
-    created_at: new Date().toISOString(),
-    token_batch_id: "",
-  },
-  {
-    id: "BATCH002",
-    creditor_name: "DEF Ltd",
-    debtor_name: "GHI Inc",
-    invoice_count: 3,
-    total_amount: 30000,
-    accepted_currency: "USD",
-    status: "VERIFIED",
-    created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    token_batch_id: "TOKEN001",
-  },
-  {
-    id: "BATCH003",
-    creditor_name: "JKL Corp",
-    debtor_name: "MNO Ltd",
-    invoice_count: 8,
-    total_amount: 80000,
-    accepted_currency: "USD",
-    status: "ISSUED",
-    created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-    token_batch_id: "TOKEN002",
-  },
-];
-
-const mockInvoices: Invoice[] = [
-  {
-    id: "INV001",
-    invoice_number: "INV-2024-001",
-    amount: 10000,
-    currency: "USD",
-    payee: "0x1234...5678",
-    payer: "0x8765...4321",
-    status: "VERIFIED",
-    due_date: Math.floor(Date.now() / 1000) + 86400 * 30, // 30 days from now
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    invoice_ipfs_hash: "QmHash1",
-    contract_ipfs_hash: "QmHash2",
-    token_batch: "BATCH001",
-    is_cleared: false,
-    is_valid: true,
-    blockchain_timestamp: Math.floor(Date.now() / 1000).toString(),
-  },
-  {
-    id: "INV002",
-    invoice_number: "INV-2024-002",
-    amount: 15000,
-    currency: "USD",
-    payee: "0x1234...5678",
-    payer: "0x8765...4321",
-    status: "PENDING",
-    due_date: Math.floor(Date.now() / 1000) + 86400 * 45, // 45 days from now
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    invoice_ipfs_hash: "QmHash3",
-    contract_ipfs_hash: "QmHash4",
-    token_batch: "BATCH001",
-    is_cleared: false,
-    is_valid: true,
-    blockchain_timestamp: "0", // Not yet on blockchain
-  },
-];
 
 export default function MyProcessingBatchesPage() {
   const { isConnected } = useAccount();
@@ -104,6 +27,7 @@ export default function MyProcessingBatchesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<InvoiceBatch | null>(null);
   const [selectedBatchInvoices, setSelectedBatchInvoices] = useState<Invoice[]>(
     []
@@ -112,17 +36,12 @@ export default function MyProcessingBatchesPage() {
   const loadBatches = async () => {
     setIsLoading(true);
     try {
-      // Mock API call
       const response = await invoiceBatchApi.list();
       if (response.code === 200) {
         setBatches(response.data);
       } else {
         message.error(response.msg || "Could not retrieve batches data");
       }
-
-      // Using mock data instead
-      // await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
-      // setBatches(mockBatches);
     } catch (error) {
       console.error(error);
       message.error("Failed to load batches. Please try again later.");
@@ -139,9 +58,8 @@ export default function MyProcessingBatchesPage() {
 
   const handleViewDetail = async (batch: InvoiceBatch) => {
     try {
-      // Mock API call
       const [batchDetailResponse, invoicesResponse] =
-        await invoiceBatchApi.detail(Number(batch.id));
+        await invoiceBatchApi.detail(batch.id);
       if (batchDetailResponse.code === 200 && invoicesResponse.code === 200) {
         setSelectedBatch(batch);
         setSelectedBatchInvoices(invoicesResponse.data);
@@ -149,16 +67,31 @@ export default function MyProcessingBatchesPage() {
       } else {
         message.warning("Could not fetch batch details");
       }
-
-      // Using mock data instead
-      // await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
-      // setSelectedBatch(batch);
-      // setSelectedBatchInvoices(mockInvoices);
-      // setShowDetailModal(true);
     } catch (error) {
       console.error(error);
       message.error("Failed to load batch details");
     }
+  };
+
+  const handleIssueToken = (batch: InvoiceBatch) => {
+    setSelectedBatch(batch);
+    setShowIssueModal(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedBatch(null);
+    setSelectedBatchInvoices([]);
+  };
+
+  const handleCloseIssueModal = () => {
+    setShowIssueModal(false);
+    setSelectedBatch(null);
+  };
+
+  const handleIssueSuccess = () => {
+    handleCloseIssueModal();
+    loadBatches(); // Refresh the batch list
   };
 
   const filteredBatches = batches.filter(
@@ -168,12 +101,6 @@ export default function MyProcessingBatchesPage() {
       batch.debtor_name.toLowerCase().includes(searchText.toLowerCase()) ||
       batch.status.toLowerCase().includes(searchText.toLowerCase())
   );
-
-  const handleCloseDetailModal = () => {
-    setShowDetailModal(false);
-    setSelectedBatch(null);
-    setSelectedBatchInvoices([]);
-  };
 
   const columns = [
     {
@@ -236,6 +163,13 @@ export default function MyProcessingBatchesPage() {
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
+          <Tooltip title="Issue Token">
+            <Button
+              type="text"
+              onClick={() => handleIssueToken(record)}
+              icon={<SendOutlined rotate={-45} />}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -268,118 +202,19 @@ export default function MyProcessingBatchesPage() {
         />
       </Card>
 
-      {/* Batch Detail Modal */}
-      <Modal
-        destroyOnClose
-        title="Batch Details"
+      <BatchDetailModal
         open={showDetailModal}
         onCancel={handleCloseDetailModal}
-        width={1000}
-        footer={[
-          <Button key="close" onClick={handleCloseDetailModal}>
-            Close
-          </Button>,
-        ]}
-      >
-        {selectedBatch && (
-          <>
-            <Descriptions
-              styles={{ label: { fontWeight: "bold" } }}
-              bordered
-              column={2}
-              size="small"
-              className="mb-6"
-            >
-              <Descriptions.Item label="Batch ID" span={2}>
-                {selectedBatch.id}
-              </Descriptions.Item>
-              <Descriptions.Item label="Creditor">
-                {selectedBatch.creditor_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Debtor">
-                {selectedBatch.debtor_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Total Amount">
-                {selectedBatch.accepted_currency}{" "}
-                {Number(selectedBatch.total_amount).toLocaleString()}
-              </Descriptions.Item>
-              <Descriptions.Item label="Invoice Count">
-                {selectedBatch.invoice_count}
-              </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <Tag
-                  color={
-                    selectedBatch.status === "PENDING"
-                      ? "orange"
-                      : selectedBatch.status === "VERIFIED"
-                      ? "blue"
-                      : selectedBatch.status === "ISSUED"
-                      ? "green"
-                      : "default"
-                  }
-                >
-                  {selectedBatch.status}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Created At" span={2}>
-                {dayjs(selectedBatch.created_at).format("YYYY-MM-DD HH:mm:ss")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Token Batch ID" span={2}>
-                {selectedBatch.token_batch_id || "Not available"}
-              </Descriptions.Item>
-            </Descriptions>
+        selectedBatch={selectedBatch}
+        selectedBatchInvoices={selectedBatchInvoices}
+      />
 
-            <Title
-              level={5}
-              style={{
-                // textAlign: "center",
-                color: "#e3e3e3ee",
-                marginBottom: 10,
-              }}
-            >
-              Invoices in this Batch
-            </Title>
-            <Table
-              columns={[
-                {
-                  title: "Invoice Number",
-                  dataIndex: "invoice_number",
-                  key: "invoice_number",
-                },
-                {
-                  title: "Amount",
-                  dataIndex: "amount",
-                  key: "amount",
-                  render: (amount: number, record: Invoice) =>
-                    `${record.currency} ${Number(amount).toLocaleString()}`,
-                },
-                {
-                  title: "Status",
-                  dataIndex: "status",
-                  key: "status",
-                  render: (text: string) => {
-                    let color = "default";
-                    if (text === "PENDING") color = "orange";
-                    if (text === "VERIFIED") color = "blue";
-                    if (text === "ISSUED") color = "green";
-                    return <Tag color={color}>{text}</Tag>;
-                  },
-                },
-                {
-                  title: "Due Date",
-                  dataIndex: "due_date",
-                  key: "due_date",
-                  render: (timestamp: number) =>
-                    dayjs(timestamp * 1000).format("YYYY-MM-DD HH:mm"),
-                },
-              ]}
-              dataSource={selectedBatchInvoices}
-              rowKey="id"
-              pagination={{ pageSize: 5 }}
-            />
-          </>
-        )}
-      </Modal>
+      <IssueTokenModal
+        open={showIssueModal}
+        onCancel={handleCloseIssueModal}
+        onSuccess={handleIssueSuccess}
+        selectedBatch={selectedBatch}
+      />
     </div>
   );
 }

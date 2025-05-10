@@ -34,6 +34,14 @@ interface ApiResponse<T> {
   msg: string;
 }
 
+export interface CreateTokenRequest {
+  batch_id: string;
+  interest_rate_apy: string;
+  maturity_date: string;
+  token_value: string;
+  total_token_supply: string;
+}
+
 export const tokenApi = {
   getTokenMarketList: (params?: {
     tokenType?: string;
@@ -66,11 +74,9 @@ export const tokenApi = {
   },
   /** 创建代币批次——从票据批次创建
    * !只有管理员 or 债权人才能创建 */
-  createTokenFromBatch: (batchId: string) => {
-    return apiRequest.post("/rwa/token/from_invoice_batch", {
-      invoice_batch_id: batchId,
+  createToken: (batchId: string, params: CreateTokenRequest) => {
+    return apiRequest.post(`/rwa/token/create?invoice_batch_id=${batchId}`, {
+      ...params,
     });
   },
-
-  createToken: () => {},
 };
