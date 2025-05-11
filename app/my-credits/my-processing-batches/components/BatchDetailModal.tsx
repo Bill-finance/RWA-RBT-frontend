@@ -11,12 +11,9 @@ interface BatchDetailModalProps {
   selectedBatchInvoices: Invoice[];
 }
 
-function BatchDetailModal({
-  open,
-  onCancel,
-  selectedBatch,
-  selectedBatchInvoices,
-}: BatchDetailModalProps) {
+function BatchDetailModal(params: BatchDetailModalProps) {
+  const { open, onCancel, selectedBatch, selectedBatchInvoices } = params;
+
   return (
     <Modal
       destroyOnClose

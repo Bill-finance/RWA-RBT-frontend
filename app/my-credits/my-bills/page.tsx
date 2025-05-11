@@ -236,24 +236,34 @@ export default function MyBillsPage() {
     {
       title: "Select",
       key: "select",
-      render: (_: unknown, record: Invoice) => (
-        <input
-          type="checkbox"
-          disabled={
-            record.status !== "VERIFIED" || processingIds.includes(record.id)
-          }
-          checked={selectedInvoices.includes(record.id)}
-          onChange={(e) => {
-            if (e.target.checked) {
-              setSelectedInvoices([...selectedInvoices, record.id]);
-            } else {
-              setSelectedInvoices(
-                selectedInvoices.filter((id) => id !== record.id)
-              );
-            }
-          }}
-        />
-      ),
+      align: "center",
+      // Antd 的 Checkbox 不够灵活
+      render: (_: unknown, record: Invoice) => {
+        const isDisabled =
+          record.status !== "VERIFIED" || processingIds.includes(record.id);
+        return (
+          <Input
+            style={{
+              height: 20,
+              width: 20,
+              textAlign: "center",
+              cursor: isDisabled ? "not-allowed" : "pointer",
+            }}
+            type="checkbox"
+            disabled={isDisabled}
+            checked={selectedInvoices.includes(record.id)}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedInvoices([...selectedInvoices, record.id]);
+              } else {
+                setSelectedInvoices(
+                  selectedInvoices.filter((id) => id !== record.id)
+                );
+              }
+            }}
+          />
+        );
+      },
     },
     // {
     //   title: "Invoice ID",
