@@ -39,12 +39,12 @@ function IssueTokenModal({
       const values = await form.validateFields();
       setIsCreatingToken(true);
 
-      const response = await tokenApi.createToken(selectedBatch.id, {
+      const response = await tokenApi.createToken({
         batch_id: selectedBatch.id,
-        interest_rate_apy: values.interest_rate_apy,
-        maturity_date: values.maturity_date.format("YYYY-MM-DD"),
-        token_value: selectedBatch.total_amount.toString(),
-        total_token_supply: selectedBatch.total_amount.toString(),
+        interest_rate_apy: Number(values.interest_rate_apy),
+        maturity_date: new Date(values.maturity_date).getTime(),
+        token_value: selectedBatch.total_amount,
+        total_token_supply: selectedBatch.total_amount,
       });
 
       if (response.code === 200) {

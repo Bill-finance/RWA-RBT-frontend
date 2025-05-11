@@ -35,7 +35,23 @@ export const enterpriseApi = {
   list: () => {
     return apiRequest.get<{
       code: number;
-      data: Enterprise[];
+      data: {
+        id: string;
+        name: string;
+        wallet_address: string;
+        status: string;
+        kyc_details_ipfs_hash: string | null;
+        created_at: {
+          $date: {
+            $numberLong: string;
+          };
+        };
+        updated_at: {
+          $date: {
+            $numberLong: string;
+          };
+        };
+      }[];
       msg: string;
     }>("/rwa/enterprise/list");
   },

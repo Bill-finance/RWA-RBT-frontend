@@ -36,10 +36,11 @@ interface ApiResponse<T> {
 
 export interface CreateTokenRequest {
   batch_id: string;
-  interest_rate_apy: string;
-  maturity_date: string;
-  token_value: string;
-  total_token_supply: string;
+  interest_rate_apy: number;
+  // 形如：9007199254740991
+  maturity_date: number;
+  token_value: number;
+  total_token_supply: number;
 }
 
 export const tokenApi = {
@@ -50,7 +51,8 @@ export const tokenApi = {
   }) => {
     const queryParams = new URLSearchParams({
       page: String(params?.page || 1),
-      pageSize: String(params?.pageSize || 10),
+      page_size: String(params?.pageSize || 10),
+      stablecoin_symbol: params?.tokenType || "USD", // TODO: 后续换成 ALL，目前先用 USD 兜底
       ...(params?.tokenType ? { tokenType: params.tokenType } : {}),
     });
 
@@ -74,8 +76,8 @@ export const tokenApi = {
   },
   /** 创建代币批次——从票据批次创建
    * !只有管理员 or 债权人才能创建 */
-  createToken: (batchId: string, params: CreateTokenRequest) => {
-    return apiRequest.post(`/rwa/token/create?invoice_batch_id=${batchId}`, {
+  createToken: (params: CreateTokenRequest) => {
+    return apiRequest.post(`/rwa/token/create`, {
       ...params,
     });
   },

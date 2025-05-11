@@ -6,14 +6,9 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 import { tokenApi, TokenMarketData } from "../utils/apis/token";
 import TokenPurchaseModal from "./components/TokenPurchaseModal";
 import { message } from "../components/Message";
+import HashText from "../components/ui/HashText";
 
 const { Title } = Typography;
-
-interface ApiResponse<T> {
-  code: number;
-  data: T;
-  msg: string;
-}
 
 export default function TokenMarketPage() {
   const [tokens, setTokens] = useState<TokenMarketData[]>([]);
@@ -31,13 +26,13 @@ export default function TokenMarketPage() {
   const loadTokens = async () => {
     setIsLoading(true);
     try {
-      const response = (await tokenApi.getTokenMarketList({
+      const response = await tokenApi.getTokenMarketList({
         page: 1,
         pageSize: 10,
         tokenType: filterStablecoin,
-      })) as ApiResponse<TokenMarketData[]>;
+      });
 
-      if (response.code === 0) {
+      if (response.code === 200) {
         setTokens(response.data);
       } else {
         message.error(response.msg || "Failed to load token list");
@@ -75,14 +70,23 @@ export default function TokenMarketPage() {
     {
       title: "Batch Reference",
       dataIndex: "batch_reference",
+      render: (text: string) => {
+        return <HashText text={text} />;
+      },
     },
     {
-      title: "Creditor",
-      dataIndex: "creditor_address",
+      title: "Payee",
+      dataIndex: "payee",
+      render: (text: string) => {
+        return <HashText text={text} />;
+      },
     },
     {
-      title: "Debtor",
-      dataIndex: "debtor_address",
+      title: "Payer",
+      dataIndex: "payer",
+      render: (text: string) => {
+        return <HashText text={text} />;
+      },
     },
     {
       title: "Stablecoin",

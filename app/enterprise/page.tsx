@@ -15,7 +15,7 @@ import {
 import { useEffect, useState } from "react";
 import { DeleteOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
 import { enterpriseApi } from "../utils/apis";
-import { EnterpriseResponse } from "./types";
+import HashText from "../components/ui/HashText";
 
 const { Title } = Typography;
 
@@ -25,8 +25,8 @@ interface Enterprise {
   walletAddress: string;
   status: string;
   kycDetailsIpfsHash: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export default function EnterprisePage() {
@@ -46,18 +46,14 @@ export default function EnterprisePage() {
     try {
       const response = await enterpriseApi.list();
       if (response?.code === 200 && Array.isArray(response.data)) {
-        const formattedData = response.data.map((item: EnterpriseResponse) => ({
+        const formattedData = response.data.map((item) => ({
           _id: item.id,
           name: item.name,
           walletAddress: item.wallet_address,
           status: item.status,
           kycDetailsIpfsHash: item.kyc_details_ipfs_hash,
-          createdAt: new Date(
-            Number(item.created_at.$date.$numberLong)
-          ).toLocaleString("en-US"),
-          updatedAt: new Date(
-            Number(item.updated_at.$date.$numberLong)
-          ).toLocaleString("en-US"),
+          createdAt: Number(item.created_at.$date.$numberLong),
+          updatedAt: Number(item.updated_at.$date.$numberLong),
         }));
         setEnterprises(formattedData);
       } else {
@@ -87,12 +83,8 @@ export default function EnterprisePage() {
           walletAddress: res.data.wallet_address,
           status: res.data.status,
           kycDetailsIpfsHash: res.data.kyc_details_ipfs_hash,
-          createdAt: new Date(
-            Number(res.data.created_at.$date.$numberLong)
-          ).toLocaleString("en-US"),
-          updatedAt: new Date(
-            Number(res.data.updated_at.$date.$numberLong)
-          ).toLocaleString("en-US"),
+          createdAt: Number(res.data.created_at.$date.$numberLong),
+          updatedAt: Number(res.data.updated_at.$date.$numberLong),
         });
         setShowDetailModal(true);
       } else {
@@ -178,14 +170,10 @@ export default function EnterprisePage() {
       key: "name",
     },
     {
-      title: "Wallet Address",
+      title: "Address",
       dataIndex: "walletAddress",
       key: "walletAddress",
-      render: (text: string) => (
-        <Tooltip title={text}>
-          <span>{`${text.slice(0, 6)}...${text.slice(-4)}`}</span>
-        </Tooltip>
-      ),
+      render: (text: string) => <HashText text={text} />,
     },
     {
       title: "Status",
@@ -210,11 +198,15 @@ export default function EnterprisePage() {
       title: "Created At",
       dataIndex: "createdAt",
       key: "createdAt",
+      render: (timestamp: number) =>
+        new Date(timestamp).toLocaleDateString("en-CA"),
     },
     {
       title: "Updated At",
       dataIndex: "updatedAt",
       key: "updatedAt",
+      render: (timestamp: number) =>
+        new Date(timestamp).toLocaleDateString("en-CA"),
     },
     {
       title: "Actions",
@@ -296,10 +288,16 @@ export default function EnterprisePage() {
               <b>KYC Hash:</b> {currentEnterprise.kycDetailsIpfsHash || "-"}
             </p>
             <p>
-              <b>Created At:</b> {currentEnterprise.createdAt}
+              <b>Created At:</b>{" "}
+              {new Date(currentEnterprise.createdAt).toLocaleDateString(
+                "en-CA"
+              )}
             </p>
             <p>
-              <b>Updated At:</b> {currentEnterprise.updatedAt}
+              <b>Updated At:</b>{" "}
+              {new Date(currentEnterprise.updatedAt).toLocaleDateString(
+                "en-CA"
+              )}
             </p>
           </div>
         )}
