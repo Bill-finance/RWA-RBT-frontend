@@ -15,14 +15,14 @@ import {
 import { SearchOutlined, EyeOutlined, SendOutlined } from "@ant-design/icons";
 import { InvoiceBatch, Invoice, invoiceBatchApi } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
-import dayjs from "dayjs";
 import BatchDetailModal from "./components/BatchDetailModal";
 import IssueTokenModal from "./components/IssueTokenModal";
+import HashText from "@/app/components/ui/HashText";
 
 const { Title } = Typography;
 
 export default function MyProcessingBatchesPage() {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const [batches, setBatches] = useState<InvoiceBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
@@ -97,34 +97,23 @@ export default function MyProcessingBatchesPage() {
   const filteredBatches = batches.filter(
     (batch) =>
       batch.id.toLowerCase().includes(searchText.toLowerCase()) ||
-      batch.creditor_name.toLowerCase().includes(searchText.toLowerCase()) ||
-      batch.debtor_name.toLowerCase().includes(searchText.toLowerCase()) ||
+      batch.payee.toLowerCase().includes(searchText.toLowerCase()) ||
+      batch.payer.toLowerCase().includes(searchText.toLowerCase()) ||
       batch.status.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const columns = [
     {
-      title: "Batch ID",
-      dataIndex: "id",
-      key: "id",
-      render: (text: string, record: InvoiceBatch) => (
-        <a onClick={() => handleViewDetail(record)}>{text}</a>
-      ),
+      title: "Payee",
+      dataIndex: "payee",
+      key: "payee",
+      render: (text: string) => <HashText text={text} />,
     },
     {
-      title: "Creditor",
-      dataIndex: "creditor_name",
-      key: "creditor_name",
-    },
-    {
-      title: "Debtor",
-      dataIndex: "debtor_name",
-      key: "debtor_name",
-    },
-    {
-      title: "Invoice Count",
-      dataIndex: "invoice_count",
-      key: "invoice_count",
+      title: "Payer",
+      dataIndex: "payer",
+      key: "payer",
+      render: (text: string) => <HashText text={text} />,
     },
     {
       title: "Total Amount",
@@ -149,31 +138,41 @@ export default function MyProcessingBatchesPage() {
       title: "Created At",
       dataIndex: "created_at",
       key: "created_at",
-      render: (date: string) => dayjs(date).format("YYYY-MM-DD HH:mm:ss"),
+      render: (text: string) => (text ? text.slice(0, 10) : "-"),
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_: unknown, record: InvoiceBatch) => (
-        <Space>
-          <Tooltip title="View Details">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Issue Token">
-            <Button
-              type="text"
-              onClick={() => handleIssueToken(record)}
-              icon={<SendOutlined rotate={-45} />}
-            />
-          </Tooltip>
-        </Space>
-      ),
+      render: (_: unknown, record: InvoiceBatch) => {
+        console.log("record", record);
+
+        return (
+          <Space>
+            <Tooltip title="View Details">
+              <Button
+                type="text"
+                icon={<EyeOutlined />}
+                onClick={() => handleViewDetail(record)}
+              />
+            </Tooltip>
+
+            {address &&
+              record.payer?.toLowerCase() === address.toLowerCase() && (
+                <Tooltip title="Issue Token">
+                  <Button
+                    type="text"
+                    onClick={() => handleIssueToken(record)}
+                    icon={<SendOutlined rotate={-45} />}
+                  />
+                </Tooltip>
+              )}
+          </Space>
+        );
+      },
     },
   ];
+
+  console.log("filteredBatches", filteredBatches);
 
   return (
     <div className="container mx-auto px-4 py-8">

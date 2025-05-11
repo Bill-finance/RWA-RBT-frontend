@@ -4,10 +4,10 @@ import { apiRequest } from "./request";
 export interface InvoiceBatch {
   accepted_currency: string;
   created_at: string;
-  creditor_name: string;
-  debtor_name: string;
   id: string;
   invoice_count: number;
+  payee: string;
+  payer: string;
   status: string;
   token_batch_id: string;
   total_amount: number;
