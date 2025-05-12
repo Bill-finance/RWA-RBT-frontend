@@ -28,7 +28,11 @@ export const enterpriseApi = {
   },
   // ✅
   getById: (id: string) => {
-    return apiRequest.get(`/rwa/enterprise/detail?id=${id}`);
+    return apiRequest.get<{
+      code: number;
+      data: Enterprise[];
+      msg: string;
+    }>(`/rwa/enterprise/detail?id=${id}`);
   },
 
   // ✅

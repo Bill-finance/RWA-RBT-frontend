@@ -1,7 +1,7 @@
 "use client";
 
 import { Table, Card, Space, Button, Tooltip, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ShoppingCartOutlined } from "@ant-design/icons";
 import { tokenApi, TokenMarketData } from "../utils/apis/token";
 import TokenPurchaseModal from "./components/TokenPurchaseModal";
@@ -12,10 +12,8 @@ const { Title } = Typography;
 
 export default function TokenMarketPage() {
   const [tokens, setTokens] = useState<TokenMarketData[]>([]);
-  const [searchText, setSearchText] = useState("");
-  const [filterStablecoin, setFilterStablecoin] = useState<
-    string | undefined
-  >();
+  const [searchText] = useState("");
+  const [filterStablecoin] = useState<string | undefined>();
   const [selectedToken, setSelectedToken] = useState<TokenMarketData | null>(
     null
   );
@@ -23,7 +21,7 @@ export default function TokenMarketPage() {
   // const [showDetailModal, setShowDetailModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadTokens = async () => {
+  const loadTokens = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await tokenApi.getTokenMarketList({
@@ -43,11 +41,11 @@ export default function TokenMarketPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filterStablecoin]);
 
   useEffect(() => {
     loadTokens();
-  }, [filterStablecoin]);
+  }, [filterStablecoin, loadTokens]);
 
   const filteredTokens = tokens.filter((token) => {
     const matchesSearch =

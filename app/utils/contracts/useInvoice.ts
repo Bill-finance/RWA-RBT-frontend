@@ -87,6 +87,8 @@ export const useInvoice = () => {
           address: contractAddress as `0x${string}`,
           functionName: "batchCreateInvoices",
           args: [transformedInvoices],
+          chain: undefined,
+          account: address as `0x${string}`,
         };
 
         // Add detailed logging
@@ -181,7 +183,7 @@ export const useInvoice = () => {
           // const explorerUrl = `https://pharosscan.xyz/tx/`;
         }
       }
-    }, [error, hash, contractAddress, receipt]);
+    }, [error, hash, receipt]);
 
     return {
       batchCreateInvoices,

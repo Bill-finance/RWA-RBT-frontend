@@ -12,7 +12,7 @@ module.exports = {
       out_file: './logs/out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       exec_mode: 'fork',
-      env_development: {
+      env: {
         NODE_ENV: 'development',
         PORT: 3000,
         NEXT_PUBLIC_API_URL: 'http://localhost:3000',

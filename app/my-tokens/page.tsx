@@ -54,6 +54,7 @@ export default function MyTokenPage() {
         message.error(response.msg || "Failed to load holdings");
       }
     } catch (err) {
+      console.error(err);
       message.error("Failed to load holdings");
     } finally {
       setIsLoading(false);
@@ -104,7 +105,7 @@ export default function MyTokenPage() {
       key: "actions",
       fixed: "right",
       width: 160,
-      render: (_: any, record: UserHoldingTokenData) => (
+      render: (_: unknown, record: UserHoldingTokenData) => (
         <Space>
           <Tooltip title="Purchase">
             <Button

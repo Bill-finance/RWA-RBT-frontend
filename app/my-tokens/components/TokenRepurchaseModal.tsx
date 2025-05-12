@@ -36,7 +36,7 @@ export default function TokenRepurchaseModal({
       message.success(`Tx sent: ${txHash}`);
       onSuccess?.();
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       message.error(err?.shortMessage || err?.message || "Transaction failed");
     } finally {
       setLoading(false);

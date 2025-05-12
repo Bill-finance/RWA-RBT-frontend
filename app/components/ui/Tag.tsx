@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Tag as AntTag, TagProps as AntTagProps } from "antd";
-import { themeColors } from "../../styles/theme";
 
 export interface CustomTagProps extends AntTagProps {
   variant?: "active" | "expired" | "overdue" | "repaid" | "pending" | "default";

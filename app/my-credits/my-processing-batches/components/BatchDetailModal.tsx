@@ -54,11 +54,11 @@ function BatchDetailModal(params: BatchDetailModalProps) {
                 {selectedBatch.status}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Creditor" span={1}>
-              {selectedBatch.creditor_name}
+            <Descriptions.Item label="Payer" span={1}>
+              {selectedBatch.payer}
             </Descriptions.Item>
-            <Descriptions.Item label="Debtor" span={1}>
-              {selectedBatch.debtor_name}
+            <Descriptions.Item label="Payee" span={1}>
+              {selectedBatch.payee}
             </Descriptions.Item>
             <Descriptions.Item label="Total Amount" span={1}>
               {selectedBatch.accepted_currency}{" "}

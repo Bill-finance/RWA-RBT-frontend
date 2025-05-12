@@ -46,15 +46,27 @@ export interface Invoice {
 export const invoiceApi = {
   // 创建
   create: (data: CreateInvoiceRequest) => {
-    return apiRequest.post("/rwa/invoice/create", data);
+    return apiRequest.post<{
+      code: number;
+      msg: string;
+      data: unknown;
+    }>("/rwa/invoice/create", data);
   },
   // 上链
   verify: (id: string) => {
-    return apiRequest.post(`/rwa/invoice/verify`, { id: id });
+    return apiRequest.post<{
+      code: number;
+      msg: string;
+      data: unknown;
+    }>(`/rwa/invoice/verify`, { id: id });
   },
   // 发布（在售）
   issue: (ids: string[]) => {
-    return apiRequest.post(`/rwa/invoice/issue`, { invoice_ids: ids });
+    return apiRequest.post<{
+      code: number;
+      msg: string;
+      data: unknown;
+    }>(`/rwa/invoice/issue`, { invoice_ids: ids });
   },
   // TODO: 下架
   // unissue: (ids: string[]) => {
@@ -72,9 +84,11 @@ export const invoiceApi = {
 
   // 删除票据
   delete: (id: string, invoiceNumber: string) => {
-    return apiRequest.delete(
-      `/rwa/invoice/del?id=${id}&invoice_number=${invoiceNumber}`
-    );
+    return apiRequest.delete<{
+      code: number;
+      msg: string;
+      data: unknown;
+    }>(`/rwa/invoice/del?id=${id}&invoice_number=${invoiceNumber}`);
   },
 
   // 查看票据本身的详情（点击按钮后调用）
@@ -92,28 +106,4 @@ export const invoiceApi = {
       `/rwa/invoice/interest_detail?holding_id=${holdingId}`
     );
   },
-  // 收敛到 list 接口
-  // getMyInvoices: () => {
-  //   return apiRequest.get("/rwa/invoice/my");
-  // },
-
-  // query: (invoiceNumber: string) => {
-  //   return apiRequest.get(`/rwa/invoice/query?invoice_number=${invoiceNumber}`);
-  // },
-
-  // batch: {
-  //   getDetailOfBatch: (batchId: string) => {
-  //     return apiRequest.get(`/rwa/invoice/batch/${batchId}`);
-  //   },
-
-  //   getInvoicesInBatch: (batchId: string) => {
-  //     return apiRequest.get<Invoice[]>(
-  //       `/rwa/invoice/batch/${batchId}/invoices`
-  //     );
-  //   },
-
-  //   getBatchOfCurrentUser: () => {
-  //     return apiRequest.get<InvoiceBatch[]>("/rwa/invoice/batches");
-  //   },
-  // },
 };

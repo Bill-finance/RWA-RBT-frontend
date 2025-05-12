@@ -77,7 +77,11 @@ export const tokenApi = {
   /** 创建代币批次——从票据批次创建
    * !只有管理员 or 债权人才能创建 */
   createToken: (params: CreateTokenRequest) => {
-    return apiRequest.post(`/rwa/token/create`, {
+    return apiRequest.post<{
+      code: number;
+      msg: string;
+      data: unknown;
+    }>(`/rwa/token/create`, {
       ...params,
     });
   },

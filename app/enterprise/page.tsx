@@ -13,7 +13,7 @@ import {
   Button,
 } from "antd";
 import { useEffect, useState } from "react";
-import { DeleteOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { enterpriseApi } from "../utils/apis";
 import HashText from "../components/ui/HashText";
 
@@ -78,13 +78,13 @@ export default function EnterprisePage() {
       const res = await enterpriseApi.getById(record._id);
       if (res?.code === 200 && res.data) {
         setCurrentEnterprise({
-          _id: res.data.id,
-          name: res.data.name,
-          walletAddress: res.data.wallet_address,
-          status: res.data.status,
-          kycDetailsIpfsHash: res.data.kyc_details_ipfs_hash,
-          createdAt: Number(res.data.created_at.$date.$numberLong),
-          updatedAt: Number(res.data.updated_at.$date.$numberLong),
+          _id: res.data[0].id,
+          name: res.data[0].name,
+          walletAddress: res.data[0].wallet_address,
+          status: res.data[0].status,
+          kycDetailsIpfsHash: res.data[0].kyc_details_ipfs_hash,
+          createdAt: Number(res.data[0].created_at),
+          updatedAt: Number(res.data[0].updated_at),
         });
         setShowDetailModal(true);
       } else {
@@ -126,22 +126,22 @@ export default function EnterprisePage() {
     });
     setShowEditModal(true);
   };
-  const handleEditSubmit = async () => {
-    if (!currentEnterprise) return;
-    try {
-      const values = await form.validateFields();
-      await enterpriseApi.update(currentEnterprise._id, {
-        name: values.name,
-        walletAddress: values.walletAddress,
-      });
-      message.success("Enterprise updated");
-      setShowEditModal(false);
-      setShowDetailModal(false);
-      loadEnterprises();
-    } catch {
-      // 校验失败或接口失败
-    }
-  };
+  // const handleEditSubmit = async () => {
+  //   if (!currentEnterprise) return;
+  //   try {
+  //     const values = await form.validateFields();
+  //     await enterpriseApi.update(currentEnterprise._id, {
+  //       name: values.name,
+  //       walletAddress: values.walletAddress,
+  //     });
+  //     message.success("Enterprise updated");
+  //     setShowEditModal(false);
+  //     setShowDetailModal(false);
+  //     loadEnterprises();
+  //   } catch {
+  //     // 校验失败或接口失败
+  //   }
+  // };
 
   // 删除企业
   const handleDelete = (record: Enterprise) => {
@@ -332,7 +332,7 @@ export default function EnterprisePage() {
         open={showEditModal}
         title="Edit Enterprise"
         onCancel={() => setShowEditModal(false)}
-        onOk={handleEditSubmit}
+        // onOk={handleEditSubmit}
         okText="Save"
       >
         <Form form={form} layout="vertical">

@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 
 // http://43.134.99.111:8888/swagger-ui/
 
@@ -40,24 +40,24 @@ request.interceptors.response.use(
 );
 
 export const apiRequest = {
-  get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+  get: <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     return request.get(url, config);
   },
-  post: <T = any>(
+  post: <T>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return request.post(url, data, config);
   },
-  put: <T = any>(
+  put: <T>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return request.put(url, data, config);
   },
-  delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+  delete: <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     return request.delete(url, config);
   },
 };

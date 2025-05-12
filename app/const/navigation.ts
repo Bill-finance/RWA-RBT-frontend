@@ -3,14 +3,14 @@ export const navigationItems = [
   //   name: "Home",
   //   href: "/",
   // },
-  {
-    name: "testPage",
-    href: "/testPage",
-  },
-  {
-    name: "Playground",
-    href: "/playground",
-  },
+  // {
+  //   name: "testPage",
+  //   href: "/testPage",
+  // },
+  // {
+  //   name: "Playground",
+  //   href: "/playground",
+  // },
   {
     name: "Products",
     href: "/products",

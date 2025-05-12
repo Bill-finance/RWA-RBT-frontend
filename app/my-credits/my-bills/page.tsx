@@ -174,13 +174,13 @@ export default function MyBillsPage() {
           // 1. 调用后端 API 更新状态
           const response = await invoiceApi.verify(currentProcessingId);
           if (response.code === 0 || response.code === 200) {
-            if (response.data.verified === "VERIFIED") {
-              message.success("Invoice verified and confirmed on blockchain");
-            } else {
-              message.warning(
-                "Transaction submitted but not yet confirmed on blockchain"
-              );
-            }
+            // if (response.data.verified === "VERIFIED") {
+            //   message.success("Invoice verified and confirmed on blockchain");
+            // } else {
+            //   message.warning(
+            //     "Transaction submitted but not yet confirmed on blockchain"
+            //   );
+            // }
             await loadInvoices();
             // 2. 获取票据详情以确认上链状态
             // const detailResponse = await invoiceApi.detail(
@@ -223,7 +223,7 @@ export default function MyBillsPage() {
     };
 
     handleTransactionComplete();
-  }, [isPending, isSuccess, error]); // 移除 processingIds 依赖
+  }, [isPending, isSuccess, processingIds, error]); // 移除 processingIds 依赖
 
   const formatTimestamp = (timestamp: number) => {
     if (!timestamp || timestamp === 0) {
@@ -236,7 +236,7 @@ export default function MyBillsPage() {
     {
       title: "Select",
       key: "select",
-      align: "center",
+      align: "center" as const,
       // Antd 的 Checkbox 不够灵活
       render: (_: unknown, record: Invoice) => {
         const isDisabled =

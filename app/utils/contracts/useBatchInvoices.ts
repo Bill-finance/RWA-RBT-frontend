@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { useInvoice } from "./useInvoice";
-import type { InvoiceData } from "./contractABI";
 
 export const useBatchInvoices = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -10,32 +9,32 @@ export const useBatchInvoices = () => {
   // 获取当前用户的发票列表
   const { refetch: refetchUserInvoices } = useGetCurrentUserInvoices();
 
-  // 转换合约数据到前端格式
-  const transformInvoiceData = useCallback(
-    (data: {
-      invoiceNumber: string;
-      payee: `0x${string}`;
-      payer: `0x${string}`;
-      amount: bigint;
-      ipfsHash: string;
-      timestamp: bigint;
-      dueDate: bigint;
-      isValid: boolean;
-    }): InvoiceData => ({
-      invoice_number: data.invoiceNumber,
-      payee: data.payee,
-      payer: data.payer,
-      amount: data.amount.toString(),
-      ipfs_hash: data.ipfsHash,
-      contract_hash: "",
-      timestamp: data.timestamp.toString(),
-      due_date: data.dueDate.toString(),
-      token_batch: "",
-      is_cleared: false,
-      is_valid: data.isValid,
-    }),
-    []
-  );
+  // // 转换合约数据到前端格式
+  // const transformInvoiceData = useCallback(
+  //   (data: {
+  //     invoiceNumber: string;
+  //     payee: `0x${string}`;
+  //     payer: `0x${string}`;
+  //     amount: bigint;
+  //     ipfsHash: string;
+  //     timestamp: bigint;
+  //     dueDate: bigint;
+  //     isValid: boolean;
+  //   }): InvoiceData => ({
+  //     invoice_number: data.invoiceNumber,
+  //     payee: data.payee,
+  //     payer: data.payer,
+  //     amount: data.amount.toString(),
+  //     ipfs_hash: data.ipfsHash,
+  //     contract_hash: "",
+  //     timestamp: data.timestamp.toString(),
+  //     due_date: data.dueDate.toString(),
+  //     token_batch: "",
+  //     is_cleared: false,
+  //     is_valid: data.isValid,
+  //   }),
+  //   []
+  // );
 
   // 加载所有发票
   const loadAllInvoices = useCallback(async () => {

@@ -3,7 +3,7 @@ import { useContract } from "./useContract";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 
 export const usePurchase = () => {
-  const { contractAddress, contractAbi } = useContract();
+  const { contractAddress, contractAbi, address } = useContract();
 
   const {
     writeContract,
@@ -36,11 +36,13 @@ export const usePurchase = () => {
         address: contractAddress as `0x${string}`,
         functionName: "purchaseShares",
         args: [tokenBatch, amount],
+        chain: undefined,
+        account: address as `0x${string}`,
       });
 
       console.log("Purchase tx hash:", result);
       return result;
-    } catch (err: any) {
+    } catch (err) {
       console.error("❌ Purchase transaction failed:", err);
       throw err;
     }

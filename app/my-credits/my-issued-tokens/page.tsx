@@ -79,7 +79,7 @@ export default function MyIssuedTokensPage() {
   const { isConnected } = useAccount();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  // const [selectedToken, setSelectedToken] = useState<Token | null>(null);
 
   // Load tokens when component mounts
   useEffect(() => {
@@ -122,14 +122,14 @@ export default function MyIssuedTokensPage() {
   );
 
   const columns = [
-    {
-      title: "Token Batch",
-      dataIndex: "tokenBatchNumber",
-      key: "tokenBatchNumber",
-      render: (text: string, record: Token) => (
-        <a onClick={() => setSelectedToken(record)}>{text}</a>
-      ),
-    },
+    // {
+    //   title: "Token Batch",
+    //   dataIndex: "tokenBatchNumber",
+    //   key: "tokenBatchNumber",
+    //   render: (text: string, record: Token) => (
+    //     <a onClick={() => setSelectedToken(record)}>{text}</a>
+    //   ),
+    // },
     {
       title: "Debtor",
       dataIndex: "debtorName",
@@ -193,13 +193,13 @@ export default function MyIssuedTokensPage() {
     {
       title: "Actions",
       key: "actions",
-      render: (_: any, record: Token) => (
+      render: () => (
         <Space>
           <Tooltip title="View Details">
             <Button
               type="text"
               icon={<EyeOutlined />}
-              onClick={() => setSelectedToken(record)}
+              // onClick={() => setSelectedToken(record)}
             />
           </Tooltip>
           <Tooltip title="Sales Analytics">

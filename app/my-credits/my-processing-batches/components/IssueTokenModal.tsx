@@ -110,11 +110,11 @@ function IssueTokenModal({
                 {selectedBatch.status}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Creditor">
-              {selectedBatch.creditor_name}
+            <Descriptions.Item label="Payer">
+              {selectedBatch.payer}
             </Descriptions.Item>
-            <Descriptions.Item label="Debtor">
-              {selectedBatch.debtor_name}
+            <Descriptions.Item label="Payee">
+              {selectedBatch.payee}
             </Descriptions.Item>
             <Descriptions.Item label="Total Amount">
               {selectedBatch.accepted_currency}{" "}
