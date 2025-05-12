@@ -11,6 +11,8 @@ export interface TokenMarketData {
   stablecoin_symbol: string;
   token_value_per_unit: string;
   total_token_amount: string;
+  stablecoin_address: string;
+  contract_address: string;
 }
 
 export interface UserHoldingTokenData {

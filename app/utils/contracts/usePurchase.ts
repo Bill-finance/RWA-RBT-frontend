@@ -31,7 +31,7 @@ export const usePurchase = () => {
         amount: amount.toString(),
       });
 
-      const result = await writeContract({
+      await writeContract({
         abi: contractAbi,
         address: contractAddress as `0x${string}`,
         functionName: "purchaseShares",
@@ -39,9 +39,6 @@ export const usePurchase = () => {
         chain: undefined,
         account: address as `0x${string}`,
       });
-
-      console.log("Purchase tx hash:", result);
-      return result;
     } catch (err) {
       console.error("❌ Purchase transaction failed:", err);
       throw err;

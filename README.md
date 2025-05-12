@@ -33,7 +33,7 @@ pnpm i
 # 更新为：
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x3fdBBc8074978c7fd8941efB71d1a8d71327E1C1
 
-# 合约地址https://explorer.sepolia.mantle.xyz/address/0x3fdBBc8074978c7fd8941efB71d1a8d71327E1C1
+# 合约地址 https://explorer.sepolia.mantle.xyz/address/0x3fdBBc8074978c7fd8941efB71d1a8d71327E1C1
 
 # Network Configuration
 NEXT_PUBLIC_CHAIN_ID=5003   

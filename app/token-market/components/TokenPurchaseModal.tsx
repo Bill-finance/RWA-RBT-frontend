@@ -1,11 +1,12 @@
 "use client";
 
-import { Modal, Button, Typography, InputNumber, Form, App } from "antd";
+import { Modal, Button, InputNumber, Form, Descriptions, Tag } from "antd";
 import { useState } from "react";
 import { TokenMarketData } from "../../utils/apis/token";
-import { usePurchase } from "@/app/utils/contracts/usePurchase";
-
-const { Text, Title } = Typography;
+import { useTokenPurchase } from "@/app/utils/contracts/useTokenPurchase";
+import { message } from "@/app/components/Message";
+import { useContract } from "@/app/utils/contracts/useContract";
+import { parseUnits } from "viem";
 
 interface Props {
   open: boolean;
@@ -20,34 +21,56 @@ export default function TokenPurchaseModal({
   onClose,
   onSuccess,
 }: Props) {
-  const { purchase } = usePurchase();
-  const { message } = App.useApp();
   const [amount, setAmount] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  const { contractAddress } = useContract();
+
+  const { purchaseWithNativeToken, isPending, isReceiptLoading, hash } =
+    useTokenPurchase();
+
+  console.log("TokenPurchaseModal props:", {
+    token,
+    contractAddress,
+  });
 
   const handleConfirm = async () => {
     if (!token || amount <= 0) return;
 
     try {
-      setLoading(true);
-      const txHash = await purchase(token.batch_reference, BigInt(amount));
+      // 获取原始批次ID
+      const batchId = token.batch_reference;
 
-      message.success(`Tx sent: ${txHash}`);
+      const pricePerToken = 1; // 1 MNT 每代币
+      const totalMNT = amount * pricePerToken;
+
+      // 将 MNT 数量转换为 wei 单位 (1 MNT = 10^18 wei)
+      const valueInWei = parseUnits(totalMNT.toString(), 18);
+
+      console.log("Purchase details:", {
+        originalBatchId: batchId,
+        amount: amount + " tokens",
+        pricePerToken: pricePerToken + " MNT",
+        totalPrice: totalMNT + " MNT",
+        valueInWei: valueInWei.toString() + " wei",
+      });
+
+      await purchaseWithNativeToken(batchId, valueInWei);
+
+      message.info(`Transaction submitted: ${hash}`);
       onSuccess?.();
       onClose();
     } catch (err) {
-      message.error(err?.shortMessage || err?.message || "Transaction failed");
-    } finally {
-      setLoading(false);
+      console.error("Purchase error:", err);
+      message.error(err?.message || "Transaction failed");
     }
   };
 
   return (
     <Modal
-      title="Purchase Token"
+      title="Token Purchase"
       open={open}
       onCancel={onClose}
+      width={600}
       footer={[
         <Button key="cancel" onClick={onClose}>
           Cancel
@@ -56,7 +79,7 @@ export default function TokenPurchaseModal({
           key="confirm"
           type="primary"
           disabled={amount <= 0}
-          loading={loading}
+          loading={isPending || isReceiptLoading}
           onClick={handleConfirm}
         >
           Confirm Purchase
@@ -65,21 +88,37 @@ export default function TokenPurchaseModal({
     >
       {token && (
         <>
-          <Title level={5}>Purchase Info</Title>
-          <Text>Token Batch: {token.batch_reference}</Text>
-          <br />
-          <Text>Available: {token.available_token_amount}</Text>
-          <br />
-          <Text>Stablecoin: {token.stablecoin_symbol}</Text>
+          <Descriptions
+            styles={{ label: { fontWeight: "bold" } }}
+            bordered
+            column={1}
+            size="small"
+            className="mb-6"
+          >
+            <Descriptions.Item label="Token Batch ID">
+              {token.batch_reference}
+            </Descriptions.Item>
+            <Descriptions.Item label="Available Amount">
+              <Tag color="blue">{token.available_token_amount} tokens</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Payment Method">
+              <Tag color="green">MNT (Native Token)</Tag>
+            </Descriptions.Item>
+          </Descriptions>
 
           <Form form={form} layout="vertical" className="mt-4">
-            <Form.Item label="Purchase Amount">
+            <Form.Item
+              label="Purchase Amount"
+              extra="Please enter the number of tokens you wish to purchase"
+            >
               <InputNumber
                 min={1}
                 max={Number(token.available_token_amount)}
                 value={amount}
                 onChange={(v) => setAmount(v || 0)}
                 style={{ width: "100%" }}
+                placeholder="Enter amount"
+                size="large"
               />
             </Form.Item>
           </Form>
