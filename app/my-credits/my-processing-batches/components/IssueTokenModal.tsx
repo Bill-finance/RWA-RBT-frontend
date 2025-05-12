@@ -7,9 +7,13 @@ import {
   Form,
   Input,
   DatePicker,
-  Alert,
 } from "antd";
-import { InvoiceBatch, tokenApi } from "@/app/utils/apis";
+import {
+  InvoiceBatch,
+  Invoice,
+  tokenApi,
+  invoiceBatchApi,
+} from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
@@ -37,9 +41,10 @@ function IssueTokenModal({
 }: IssueTokenModalProps) {
   const [form] = Form.useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<string | null>(null);
   const [tokenCreationComplete, setTokenCreationComplete] = useState(false);
+  const [batchInvoices, setBatchInvoices] = useState<Invoice[]>([]);
 
   // Get contract hooks
   const { useCreateToken } = useToken();
@@ -58,12 +63,30 @@ function IssueTokenModal({
         interest_rate_apy: "5",
         maturity_date: dayjs().add(1, "year"),
       });
-      setError(null);
+      // setError(null);
       setCurrentTokenId(null);
       setTokenCreationComplete(false);
       setIsSubmitting(false);
     }
   }, [open, form]);
+
+  // Load batch invoices when modal opens
+  useEffect(() => {
+    if (open && selectedBatch) {
+      // Load invoices for the batch
+      invoiceBatchApi
+        .detail(selectedBatch.id)
+        .then(([, invoicesResponse]) => {
+          if (invoicesResponse.code === 200) {
+            setBatchInvoices(invoicesResponse.data);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load batch invoices:", error);
+          // setError("Failed to load batch invoices. Please try again.");
+        });
+    }
+  }, [open, selectedBatch]);
 
   // Monitor token creation status
   useEffect(() => {
@@ -73,7 +96,7 @@ function IssueTokenModal({
     if (tokenError) {
       console.error("Token creation failed:", tokenError);
       message.error("Failed to create token on blockchain");
-      setError("Transaction failed or was rejected");
+      // setError("Transaction failed or was rejected");
       setIsSubmitting(false);
       return;
     }
@@ -153,17 +176,17 @@ function IssueTokenModal({
         }
       }
 
-      if (!backendUpdateSuccess) {
-        setError(
-          "Token created on blockchain, but backend could not be updated. Please contact support."
-        );
-      }
+      // if (!backendUpdateSuccess) {
+      //   setError(
+      //     "Token created on blockchain, but backend could not be updated. Please contact support."
+      //   );
+      // }
     } catch (error) {
       console.error("Error updating backend:", error);
       message.error("Failed to update backend with token information");
-      setError(
-        error instanceof Error ? error.message : "Failed to update backend"
-      );
+      // setError(
+      //   error instanceof Error ? error.message : "Failed to update backend"
+      // );
     } finally {
       setIsSubmitting(false);
     }
@@ -175,14 +198,16 @@ function IssueTokenModal({
     try {
       const values = await form.validateFields();
       setIsSubmitting(true);
-      setError(null);
+      // setError(null);
 
       // Generate token ID
       const newTokenId = `TOKEN-${selectedBatch.id}-${Date.now()}`;
       setCurrentTokenId(newTokenId);
 
       // Convert form values for blockchain
-      const maturityTimestamp = values.maturity_date.valueOf() / 1000; // Convert to seconds
+      const maturityTimestamp = Math.floor(
+        values.maturity_date.valueOf() / 1000
+      ); // Convert to seconds, ensure integer
       const interestRateBasisPoints = Math.floor(
         Number(values.interest_rate_apy) * 100
       ); // Convert to basis points
@@ -191,12 +216,62 @@ function IssueTokenModal({
       try {
         message.loading("Creating token on blockchain...", 0);
 
+        // Extract invoice numbers from loaded invoices
+        const invoiceNumbers = batchInvoices.map(
+          (invoice) => invoice.invoice_number
+        );
+
+        if (invoiceNumbers.length === 0) {
+          throw new Error("No invoices found for this batch");
+        }
+
+        // 获取稳定币地址并验证
+        // 直接使用环境变量，确保其已正确配置
+        const stableTokenAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+        console.log("Debug stableToken info:", {
+          batchId: selectedBatch.id,
+          invoiceCount: invoiceNumbers.length,
+          stableTokenAddress,
+          envLoaded: !!process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
+          env: process.env,
+        });
+
+        if (!stableTokenAddress) {
+          const errorMsg =
+            "Stable token address is not configured in environment variables";
+          // setError(errorMsg);
+          message.error("Missing stable token address configuration");
+          setIsSubmitting(false);
+          throw new Error(errorMsg);
+        }
+
+        if (
+          stableTokenAddress.length < 42 ||
+          (!stableTokenAddress.startsWith("0x") &&
+            !stableTokenAddress.startsWith("0X"))
+        ) {
+          const errorMsg = `Invalid stable token address format: ${stableTokenAddress}`;
+          // setError(errorMsg);
+          message.error("Invalid stable token address format");
+          setIsSubmitting(false);
+          throw new Error(errorMsg);
+        }
+
+        // 确保地址格式正确
+        const formattedAddress =
+          stableTokenAddress.startsWith("0x") ||
+          stableTokenAddress.startsWith("0X")
+            ? (stableTokenAddress as `0x${string}`)
+            : (`0x${stableTokenAddress}` as `0x${string}`);
+
         await executeCreateToken(
-          newTokenId,
           selectedBatch.id,
-          selectedBatch.total_amount.toString(),
-          maturityTimestamp.toString(),
-          interestRateBasisPoints.toString()
+          invoiceNumbers,
+          formattedAddress,
+          Math.floor(Date.now() / 1000).toString(), // minTerm - 当前时间作为最小期限，确保整数
+          maturityTimestamp.toString(), // maxTerm - 到期日作为最大期限，确保整数
+          interestRateBasisPoints.toString() // 利率(基点)，确保整数
         );
       } catch (err) {
         console.error("Failed to initiate token creation:", err);
@@ -206,11 +281,11 @@ function IssueTokenModal({
       }
     } catch (err: unknown) {
       console.error("Form validation or submission failed:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred while creating the token"
-      );
+      // setError(
+      //   err instanceof Error
+      //     ? err.message
+      //     : "An error occurred while creating the token"
+      // );
       setIsSubmitting(false);
       message.destroy();
     }
@@ -242,16 +317,6 @@ function IssueTokenModal({
         </Button>,
       ]}
     >
-      {error && (
-        <Alert
-          type="error"
-          message="Error"
-          description={error}
-          className="mb-4"
-          showIcon
-        />
-      )}
-
       {selectedBatch && (
         <>
           <Descriptions
