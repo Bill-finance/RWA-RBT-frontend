@@ -1,12 +1,14 @@
 "use client";
 
-import { Table, Card, Space, Button, Tooltip, Typography } from "antd";
+import { Table, Card, Space, Button, Tooltip, Typography, Badge } from "antd";
 import { useCallback, useEffect, useState } from "react";
-import { ShoppingCartOutlined } from "@ant-design/icons";
+import { ShoppingCartOutlined, SyncOutlined } from "@ant-design/icons";
 import { tokenApi, TokenMarketData } from "../utils/apis/token";
 import TokenPurchaseModal from "./components/TokenPurchaseModal";
 import { message } from "../components/Message";
 import HashText from "../components/ui/HashText";
+import { useContract } from "@/app/utils/contracts/useContract";
+import { invoiceBatchApi } from "@/app/utils/apis/invoiceBatch";
 
 const { Title } = Typography;
 
@@ -18,8 +20,65 @@ export default function TokenMarketPage() {
     null
   );
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  // const [showDetailModal, setShowDetailModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshingBatchId, setRefreshingBatchId] = useState<string | null>(
+    null
+  );
+
+  // Get contract info for batch verification
+  const { contractAddress } = useContract();
+
+  // Read contract to verify batch issuance status
+  const verifyBatchStatus = async (batchId: string): Promise<boolean> => {
+    try {
+      setRefreshingBatchId(batchId);
+
+      // Add console log to verify data
+      console.log("Verifying batch status:", {
+        batchId,
+        contractAddress,
+      });
+
+      // Call the existing API to check batch status
+      const [batchDetailResponse] = await invoiceBatchApi.detail(batchId);
+
+      if (
+        batchDetailResponse.code === 200 &&
+        batchDetailResponse.data.length > 0
+      ) {
+        // 检查第一个返回对象的状态
+        const batch = batchDetailResponse.data[0];
+        // 假设 "ISSUED" 状态表示已经上链发行
+        const isIssued = batch.status === "ISSUED";
+
+        console.log("Batch status:", batch.status, "isIssued:", isIssued);
+
+        // Update token status in the UI with verification result
+        setTokens((prev) =>
+          prev.map((token) =>
+            token.batch_reference === batchId
+              ? { ...token, verified: true, is_issued: isIssued }
+              : token
+          )
+        );
+
+        if (!isIssued) {
+          message.warning(`批次状态: ${batch.status}，尚未发行，无法购买`);
+        }
+
+        return isIssued;
+      }
+
+      message.error("未找到批次信息");
+      return false;
+    } catch (error) {
+      console.error("Failed to verify batch status:", error);
+      message.error("验证批次状态失败");
+      return false;
+    } finally {
+      setRefreshingBatchId(null);
+    }
+  };
 
   const loadTokens = useCallback(async () => {
     setIsLoading(true);
@@ -31,7 +90,13 @@ export default function TokenMarketPage() {
       });
 
       if (response.code === 200) {
-        setTokens(response.data);
+        // Initialize tokens with verification status as needed
+        const tokensWithStatus = response.data.map((token) => ({
+          ...token,
+          verified: false,
+          is_issued: undefined,
+        }));
+        setTokens(tokensWithStatus);
       } else {
         message.error(response.msg || "Failed to load token list");
       }
@@ -59,17 +124,42 @@ export default function TokenMarketPage() {
     return matchesSearch && matchesCoin;
   });
 
-  const handlePurchase = (token: TokenMarketData) => {
-    setSelectedToken(token);
-    setShowPurchaseModal(true);
+  const handlePurchase = async (token: TokenMarketData) => {
+    try {
+      // Verify batch status before proceeding with purchase
+      const isIssued = await verifyBatchStatus(token.batch_reference);
+
+      if (!isIssued) {
+        message.error(
+          "This token batch has not been issued yet and cannot be purchased"
+        );
+        return;
+      }
+
+      setSelectedToken(token);
+      setShowPurchaseModal(true);
+    } catch (error) {
+      console.error("Error before purchase:", error);
+      message.error("Failed to verify token status");
+    }
   };
 
   const columns = [
     {
       title: "Batch Reference",
       dataIndex: "batch_reference",
-      render: (text: string) => {
-        return <HashText text={text} />;
+      render: (text: string, record: TokenMarketData) => {
+        return (
+          <div className="flex items-center">
+            <HashText text={text} />
+            {record.verified && record.is_issued && (
+              <Badge status="success" text="Verified" className="ml-2" />
+            )}
+            {record.verified && record.is_issued === false && (
+              <Badge status="error" text="Not Issued" className="ml-2" />
+            )}
+          </div>
+        );
       },
     },
     {
@@ -111,11 +201,28 @@ export default function TokenMarketPage() {
       key: "actions",
       render: (_: unknown, record: TokenMarketData) => (
         <Space>
-          <Tooltip title="Purchase">
+          <Tooltip title="Verify Status">
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => verifyBatchStatus(record.batch_reference)}
+              loading={refreshingBatchId === record.batch_reference}
+            />
+          </Tooltip>
+          <Tooltip
+            title={
+              Number(record.available_token_amount) === 0
+                ? "Sold Out"
+                : "Purchase"
+            }
+          >
             <Button
               icon={<ShoppingCartOutlined />}
               onClick={() => handlePurchase(record)}
-              disabled={Number(record.available_token_amount) === 0}
+              disabled={
+                Number(record.available_token_amount) === 0 ||
+                (record.verified && record.is_issued === false)
+              }
+              loading={refreshingBatchId === record.batch_reference}
             />
           </Tooltip>
         </Space>
@@ -145,12 +252,6 @@ export default function TokenMarketPage() {
         onClose={() => setShowPurchaseModal(false)}
         onSuccess={loadTokens}
       />
-
-      {/* <TokenDetailModal
-        open={showDetailModal}
-        token={selectedToken}
-        onClose={() => setShowDetailModal(false)}
-      /> */}
     </div>
   );
 }

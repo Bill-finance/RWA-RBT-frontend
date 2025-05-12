@@ -25,6 +25,7 @@ import {
 import { invoiceApi, Invoice } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import CreateInvoiceModal from "./components/CreateInvoiceModal";
+import CreateTokenBatchModal from "./components/CreateTokenBatchModal";
 import dayjs from "dayjs";
 
 const { Title } = Typography;
@@ -36,11 +37,12 @@ export default function MyBillsPage() {
   const [searchText, setSearchText] = useState("");
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showTokenBatchModal, setShowTokenBatchModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [processingIds, setProcessingIds] = useState<string[]>([]);
+
   const { useBatchCreateInvoices } = useInvoice();
-  // const { getInvoiceDetails } = useBatchInvoices();
   const { batchCreateInvoices, isPending, isSuccess, error } =
     useBatchCreateInvoices();
 
@@ -73,31 +75,26 @@ export default function MyBillsPage() {
     }
   }, [isConnected]);
 
+  // Add a useEffect to track the status of the current batch
+  useEffect(() => {
+    if (selectedInvoices.length > 0 && processingIds.length > 0) {
+      const timer = setTimeout(() => {
+        // Monitor processing status periodically
+        console.log(`Monitoring invoices: ${selectedInvoices.join(", ")}`);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedInvoices, processingIds]);
+
   const handleIssueInvoices = async () => {
     if (selectedInvoices.length === 0) {
       message.warning("Please select at least one invoice to issue");
       return;
     }
 
-    setProcessingIds([...processingIds, ...selectedInvoices]);
-
-    try {
-      const response = await invoiceApi.issue(selectedInvoices);
-      if (response.code === 0 || response.code === 200) {
-        message.success("Invoices issued successfully");
-        await loadInvoices();
-        setSelectedInvoices([]);
-      } else {
-        message.error(response.msg || "Failed to issue invoices");
-      }
-    } catch (error) {
-      console.error(error);
-      message.error("Failed to issue invoices");
-    } finally {
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
-    }
+    // Show the token batch modal to collect user input
+    setShowTokenBatchModal(true);
   };
 
   const handleVerifyInvoice = async (invoiceNumber: string, id: string) => {
@@ -164,66 +161,59 @@ export default function MyBillsPage() {
 
   // 监听交易状态变化
   useEffect(() => {
-    const handleTransactionComplete = async () => {
-      if (!isPending && isSuccess) {
-        try {
-          // 获取当前正在处理的票据ID
-          const currentProcessingId = processingIds[0];
-          if (!currentProcessingId) return;
+    // Only proceed if there are transactions to process and
+    // a transaction status has changed
+    if (processingIds.length === 0 || isPending) {
+      return;
+    }
 
-          // 1. 调用后端 API 更新状态
-          const response = await invoiceApi.verify(currentProcessingId);
-          if (response.code === 0 || response.code === 200) {
-            // if (response.data.verified === "VERIFIED") {
-            //   message.success("Invoice verified and confirmed on blockchain");
-            // } else {
-            //   message.warning(
-            //     "Transaction submitted but not yet confirmed on blockchain"
-            //   );
-            // }
-            await loadInvoices();
-            // 2. 获取票据详情以确认上链状态
-            // const detailResponse = await invoiceApi.detail(
-            //   response.data.invoice_number
-            // );
-            // if (detailResponse.code === 200 && detailResponse.data[0]) {
-            //   const invoiceDetail = detailResponse.data[0];
-            //   console.log("invoiceDetail", invoiceDetail);
-            //   // 3. 检查上链状态
-            //   if (invoiceDetail.blockchain_timestamp) {
-            //     message.success("Invoice verified and confirmed on blockchain");
-            //     await loadInvoices();
-            //   } else {
-            //     message.warning(
-            //       "Transaction submitted but not yet confirmed on blockchain"
-            //     );
-            //   }
-            // } else {
-            //   throw new Error("Failed to get invoice details");
-            // }
-          } else {
-            throw new Error(response.msg || "Failed to verify invoice");
+    // Process transaction completion
+    const handleTransactionResult = async () => {
+      try {
+        // Get the first processing ID
+        const currentProcessingId = processingIds[0];
+        if (!currentProcessingId) return;
+
+        if (isSuccess) {
+          // Transaction succeeded
+          try {
+            // Call backend API to update status
+            const response = await invoiceApi.verify(currentProcessingId);
+            if (response.code === 0 || response.code === 200) {
+              await loadInvoices();
+            } else {
+              throw new Error(response.msg || "Failed to verify invoice");
+            }
+          } catch (error) {
+            console.error("API verification failed:", error);
+            message.error(
+              error instanceof Error
+                ? error.message
+                : "Failed to verify invoice"
+            );
           }
-        } catch (error) {
-          console.error("API verification failed:", error);
-          message.error(
-            error instanceof Error ? error.message : "Failed to verify invoice"
-          );
-        } finally {
-          // 使用函数式更新来避免依赖 processingIds
-          setProcessingIds((prev) => prev.slice(1));
+        } else if (error) {
+          // Transaction failed
+          console.error("Transaction failed:", error);
+          message.error(error.message || "Transaction failed");
         }
-      } else if (!isPending && error) {
-        // 交易失败
-        console.error("Transaction failed:", error);
-        message.error(error.message || "Transaction failed");
-        // 使用函数式更新来避免依赖 processingIds
-        setProcessingIds((prev) => prev.slice(1));
+
+        // Remove processed ID regardless of outcome - do this outside the conditional blocks
+        setProcessingIds((prev) =>
+          prev.filter((id) => id !== currentProcessingId)
+        );
+      } catch (err) {
+        console.error("Error handling transaction result:", err);
+        // Still remove the ID to prevent getting stuck
+        setProcessingIds((prev) =>
+          prev.filter((id) => id !== processingIds[0])
+        );
       }
     };
 
-    handleTransactionComplete();
-  }, [isPending, isSuccess, processingIds, error]); // 移除 processingIds 依赖
+    // Run the handler
+    handleTransactionResult();
+  }, [isPending, isSuccess, error]); // Don't include processingIds in dependencies
 
   const formatTimestamp = (timestamp: number) => {
     if (!timestamp || timestamp === 0) {
@@ -244,8 +234,8 @@ export default function MyBillsPage() {
         return (
           <Input
             style={{
-              height: 20,
-              width: 20,
+              height: 16,
+              width: 16,
               textAlign: "center",
               cursor: isDisabled ? "not-allowed" : "pointer",
             }}
@@ -398,6 +388,11 @@ export default function MyBillsPage() {
   // 清除状态并关闭创建票据模态窗
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
+  };
+
+  // Close token batch modal
+  const handleCloseTokenBatchModal = () => {
+    setShowTokenBatchModal(false);
   };
 
   return (
@@ -566,6 +561,19 @@ export default function MyBillsPage() {
           setShowCreateModal(false);
           loadInvoices();
         }}
+      />
+
+      {/* Create Token Batch Modal */}
+      <CreateTokenBatchModal
+        open={showTokenBatchModal}
+        onCancel={handleCloseTokenBatchModal}
+        selectedInvoices={selectedInvoices}
+        invoiceNumbers={invoices
+          .filter((inv) => selectedInvoices.includes(inv.id))
+          .map((inv) => inv.invoice_number)}
+        onSuccess={loadInvoices}
+        setProcessingIds={setProcessingIds}
+        processingIds={processingIds}
       />
     </div>
   );

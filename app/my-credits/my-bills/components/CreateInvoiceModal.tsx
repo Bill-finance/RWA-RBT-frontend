@@ -89,11 +89,6 @@ function CreateInvoiceModal({
         </Button>,
       ]}
     >
-      {error && (
-        <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-red-600">
-          {error}
-        </div>
-      )}
       <Form form={form} layout="vertical" initialValues={{ currency: "USD" }}>
         <Form.Item
           name="payee"

@@ -13,6 +13,8 @@ export interface TokenMarketData {
   total_token_amount: string;
   stablecoin_address: string;
   contract_address: string;
+  verified?: boolean;
+  is_issued?: boolean;
 }
 
 export interface UserHoldingTokenData {
@@ -43,6 +45,19 @@ export interface CreateTokenRequest {
   maturity_date: number;
   token_value: number;
   total_token_supply: number;
+  blockchain_token_id?: string; // Optional blockchain token ID field
+}
+
+export interface Token {
+  id: string;
+  batch_id: string;
+  interest_rate_apy: number;
+  maturity_date: number;
+  token_value: number;
+  total_token_supply: number;
+  blockchain_token_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const tokenApi = {
@@ -76,15 +91,31 @@ export const tokenApi = {
       "/rwa/token/holdings"
     );
   },
-  /** 创建代币批次——从票据批次创建
-   * !只有管理员 or 债权人才能创建 */
-  createToken: (params: CreateTokenRequest) => {
+
+  // Create a new token
+  createToken: (data: CreateTokenRequest) => {
     return apiRequest.post<{
       code: number;
       msg: string;
-      data: unknown;
-    }>(`/rwa/token/create`, {
-      ...params,
-    });
+      data: Token;
+    }>(`/rwa/token/create`, data);
+  },
+
+  // List tokens
+  list: () => {
+    return apiRequest.get<{
+      code: number;
+      msg: string;
+      data: Token[];
+    }>(`/rwa/token/list`);
+  },
+
+  // Get token details by ID
+  detail: (id: string) => {
+    return apiRequest.get<{
+      code: number;
+      msg: string;
+      data: Token;
+    }>(`/rwa/token/detail?id=${id}`);
   },
 };

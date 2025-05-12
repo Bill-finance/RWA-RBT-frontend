@@ -189,6 +189,16 @@ export const useTokenPurchase = (tokenAddress?: `0x${string}`) => {
       );
     }
 
+    // Validate the batch ID
+    if (!tokenBatch || tokenBatch.trim().length === 0) {
+      throw new Error("Invalid batch ID - must be a non-empty string");
+    }
+
+    // Validate the value
+    if (!value || value <= BigInt(0)) {
+      throw new Error("Invalid purchase amount - must be greater than 0");
+    }
+
     try {
       console.log("Purchasing with native token (MNT)", {
         tokenBatch,
@@ -201,7 +211,7 @@ export const useTokenPurchase = (tokenAddress?: `0x${string}`) => {
         address: contractAddress as `0x${string}`,
         abi: contractAbi,
         functionName: "purchaseSharesWithNativeToken",
-        args: [tokenBatch], // 直接使用字符串类型的批次ID
+        args: [tokenBatch.trim()], // 确保去除任何可能的空格
         account: address,
         chain: currentChain,
       } as const;
@@ -232,13 +242,24 @@ export const useTokenPurchase = (tokenAddress?: `0x${string}`) => {
 
         // 尝试从错误消息中提取合约特定的错误
         if (errorMessage.includes("execution reverted")) {
-          const reasonMatch = errorMessage.match(/reason="([^"]+)"/);
-          if (reasonMatch && reasonMatch[1]) {
-            errorMessage = `Contract error: ${reasonMatch[1]}`;
-          } else {
+          // 检查具体的合约错误类型
+          if (errorMessage.includes("Invoice__BatchNotIssued")) {
             errorMessage =
-              "Contract execution reverted: The transaction was rejected by the contract. 可能的原因：1) 批次未发行; 2) 批次已售罄; 3) 支付金额不足";
+              "The token batch has not been issued yet. Please check the batch status.";
+          } else if (errorMessage.includes("Invoice__InsufficientBalance")) {
+            errorMessage =
+              "Insufficient tokens available in this batch. Please try a smaller amount.";
+          } else if (errorMessage.includes("Invoice__InvalidAmount")) {
+            errorMessage = "Invalid purchase amount provided.";
+          } else if (errorMessage.includes("Invoice__TransferFailed")) {
+            errorMessage = "Token transfer failed. Please contact support.";
+          } else {
+            // 通用回滚错误
+            errorMessage =
+              "Contract execution reverted: The transaction was rejected by the contract. Possible reasons: 1) Batch not issued 2) Batch sold out 3) Insufficient payment amount";
           }
+        } else if (errorMessage.includes("user rejected")) {
+          errorMessage = "Transaction rejected by user";
         }
       }
 

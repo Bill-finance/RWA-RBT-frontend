@@ -61,12 +61,15 @@ export const invoiceApi = {
     }>(`/rwa/invoice/verify`, { id: id });
   },
   // 发布（在售）
-  issue: (ids: string[]) => {
+  issue: (ids: string[], batchId?: string) => {
+    const payload = batchId
+      ? { invoice_ids: ids, batch_id: batchId }
+      : { invoice_ids: ids };
     return apiRequest.post<{
       code: number;
       msg: string;
       data: unknown;
-    }>(`/rwa/invoice/issue`, { invoice_ids: ids });
+    }>(`/rwa/invoice/issue`, payload);
   },
   // TODO: 下架
   // unissue: (ids: string[]) => {

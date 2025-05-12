@@ -196,6 +196,148 @@ export const useInvoice = () => {
     };
   };
 
+  // Create token batch hook
+  const useCreateTokenBatch = () => {
+    const {
+      writeContract,
+      isPending,
+      isSuccess,
+      error,
+      data: hash,
+    } = useWriteContract();
+
+    const { data: receipt, isLoading: isReceiptLoading } =
+      useWaitForTransactionReceipt({
+        hash: hash as `0x${string}`,
+      });
+
+    const createTokenBatch = async (
+      batchId: string,
+      invoiceNumbers: string[],
+      stableToken: string,
+      minTerm: number,
+      maxTerm: number,
+      interestRate: number
+    ) => {
+      if (!contractAddress) {
+        console.error("Contract address is not defined");
+        return;
+      }
+
+      try {
+        const params = {
+          abi: contractAbi,
+          address: contractAddress as `0x${string}`,
+          functionName: "createTokenBatch",
+          args: [
+            batchId,
+            invoiceNumbers,
+            stableToken,
+            BigInt(minTerm),
+            BigInt(maxTerm),
+            BigInt(interestRate),
+          ],
+          account: address as `0x${string}`,
+          chain: undefined,
+        };
+
+        console.log("Creating token batch with params:", {
+          batchId,
+          invoiceNumbers,
+          stableToken,
+          minTerm,
+          maxTerm,
+          interestRate,
+        });
+
+        const result = await writeContract(params);
+        console.log("Transaction hash:", result);
+        return result;
+      } catch (err) {
+        console.error("Failed to create token batch:", err);
+        throw err;
+      }
+    };
+
+    return {
+      createTokenBatch,
+      isPending,
+      isSuccess,
+      error,
+      hash,
+      receipt,
+      isReceiptLoading,
+    };
+  };
+
+  // Confirm token batch issue hook
+  const useConfirmTokenBatchIssue = () => {
+    const {
+      writeContract,
+      isPending,
+      isSuccess,
+      error,
+      data: hash,
+    } = useWriteContract();
+
+    const { data: receipt, isLoading: isReceiptLoading } =
+      useWaitForTransactionReceipt({
+        hash: hash as `0x${string}`,
+      });
+
+    const confirmTokenBatchIssue = async (batchId: string) => {
+      if (!contractAddress) {
+        console.error("Contract address is not defined");
+        return;
+      }
+
+      try {
+        const params = {
+          abi: contractAbi,
+          address: contractAddress as `0x${string}`,
+          functionName: "confirmTokenBatchIssue",
+          args: [batchId],
+          account: address as `0x${string}`,
+          chain: undefined,
+        };
+
+        console.log("Confirming token batch issue with params:", {
+          batchId,
+        });
+
+        const result = await writeContract(params);
+        console.log("Transaction hash:", result);
+        return result;
+      } catch (err) {
+        console.error("Failed to confirm token batch issue:", err);
+        throw err;
+      }
+    };
+
+    return {
+      confirmTokenBatchIssue,
+      isPending,
+      isSuccess,
+      error,
+      hash,
+      receipt,
+      isReceiptLoading,
+    };
+  };
+
+  // Get token batch details hook
+  const useGetTokenBatch = (batchId?: string, enabled: boolean = !!batchId) => {
+    return useReadContract({
+      address: contractAddress as `0x${string}`,
+      abi: contractAbi,
+      functionName: "getTokenBatch",
+      args: batchId ? [batchId] : undefined,
+      query: {
+        enabled: enabled && !!batchId,
+      },
+    });
+  };
+
   // 查询单个票据
   const useGetInvoice = (
     invoiceNumber?: string,
@@ -278,6 +420,9 @@ export const useInvoice = () => {
     contractAddress: contractAddress as `0x${string}`,
     contractAbi,
     useBatchCreateInvoices,
+    useCreateTokenBatch,
+    useConfirmTokenBatchIssue,
+    useGetTokenBatch,
     useGetInvoice,
     useGetUserInvoices,
     useGetCurrentUserInvoices,

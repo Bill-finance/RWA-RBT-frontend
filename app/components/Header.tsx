@@ -20,7 +20,7 @@ const menuItems = [
     name: "My Credits",
     children: [
       { name: "Bills", path: "/my-credits/my-bills" },
-      { name: "Processing Batches", path: "/my-credits/my-processing-batches" },
+      { name: "Packaged Batches", path: "/my-credits/my-processing-batches" },
       { name: "Issued Tokens", path: "/my-credits/my-issued-tokens" },
     ],
   },
