@@ -52,106 +52,6 @@ function CreateTokenBatchModal({
     error: confirmError,
   } = useConfirmTokenBatchIssue();
 
-  // Reset all states when modal opens/closes
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      form.resetFields();
-      setCurrentBatchId(null);
-      setCreationComplete(false);
-      setConfirmationComplete(false);
-
-      // Set default values
-      form.setFieldsValue({
-        stableTokenAddress: "0x0000000000000000000000000000000000000000",
-        minTerm: 3,
-        maxTerm: 12,
-        interestRate: 5, // 5%
-      });
-    }
-  }, [open, form]);
-
-  // Monitor token batch creation status
-  useEffect(() => {
-    if (!currentBatchId) return;
-
-    // Check for error condition (transaction rejected or failed)
-    if (createBatchError) {
-      console.error("Token batch creation failed:", createBatchError);
-      message.error("Failed to create token batch on blockchain");
-      setError("Transaction failed or was rejected");
-      setSubmitting(false);
-      // Clear processing IDs
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
-      return;
-    }
-
-    if (isCreateBatchSuccess && !creationComplete) {
-      setCreationComplete(true);
-      message.success("Token batch created successfully!");
-
-      // Proceed to confirmation step
-      const confirmBatch = async () => {
-        try {
-          message.info("Confirming token batch issuance...");
-          await confirmTokenBatchIssue(currentBatchId);
-        } catch (err) {
-          console.error("Failed to initiate token batch confirmation:", err);
-          message.error("Failed to confirm token batch issuance");
-        }
-      };
-
-      confirmBatch();
-    }
-  }, [
-    currentBatchId,
-    isCreateBatchPending,
-    isCreateBatchSuccess,
-    createBatchError,
-    creationComplete,
-    processingIds,
-    selectedInvoices,
-    setProcessingIds,
-  ]);
-
-  // Monitor token batch confirmation status
-  useEffect(() => {
-    if (!currentBatchId || !creationComplete) return;
-
-    // Check for error condition (transaction rejected or failed)
-    if (confirmError) {
-      console.error("Token batch confirmation failed:", confirmError);
-      message.error("Failed to confirm token batch on blockchain");
-      setError("Confirmation transaction failed or was rejected");
-      setSubmitting(false);
-      // Clear processing IDs
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
-      return;
-    }
-
-    if (isConfirmSuccess && !confirmationComplete) {
-      setConfirmationComplete(true);
-      message.success("Token batch issuance confirmed!");
-
-      // Proceed to backend update
-      updateBackend(currentBatchId);
-    }
-  }, [
-    currentBatchId,
-    creationComplete,
-    isConfirmPending,
-    isConfirmSuccess,
-    confirmError,
-    confirmationComplete,
-    processingIds,
-    selectedInvoices,
-    setProcessingIds,
-  ]);
-
   // Update backend after confirmation is complete
   const updateBackend = async (batchId: string) => {
     try {
@@ -265,6 +165,108 @@ function CreateTokenBatchModal({
       );
     }
   };
+
+  // Reset all states when modal opens/closes
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      form.resetFields();
+      setCurrentBatchId(null);
+      setCreationComplete(false);
+      setConfirmationComplete(false);
+
+      // Set default values
+      form.setFieldsValue({
+        stableTokenAddress: "0x0000000000000000000000000000000000000000",
+        minTerm: 3,
+        maxTerm: 12,
+        interestRate: 5, // 5%
+      });
+    }
+  }, [open, form]);
+
+  // Monitor token batch creation status
+  useEffect(() => {
+    if (!currentBatchId) return;
+
+    // Check for error condition (transaction rejected or failed)
+    if (createBatchError) {
+      console.error("Token batch creation failed:", createBatchError);
+      message.error("Failed to create token batch on blockchain");
+      setError("Transaction failed or was rejected");
+      setSubmitting(false);
+      // Clear processing IDs
+      setProcessingIds(
+        processingIds.filter((id) => !selectedInvoices.includes(id))
+      );
+      return;
+    }
+
+    if (isCreateBatchSuccess && !creationComplete) {
+      setCreationComplete(true);
+      message.success("Token batch created successfully!");
+
+      // Proceed to confirmation step
+      const confirmBatch = async () => {
+        try {
+          message.info("Confirming token batch issuance...");
+          await confirmTokenBatchIssue(currentBatchId);
+        } catch (err) {
+          console.error("Failed to initiate token batch confirmation:", err);
+          message.error("Failed to confirm token batch issuance");
+        }
+      };
+
+      confirmBatch();
+    }
+  }, [
+    currentBatchId,
+    isCreateBatchPending,
+    isCreateBatchSuccess,
+    createBatchError,
+    creationComplete,
+    processingIds,
+    selectedInvoices,
+    confirmTokenBatchIssue,
+    setProcessingIds,
+  ]);
+
+  // Monitor token batch confirmation status
+  useEffect(() => {
+    if (!currentBatchId || !creationComplete) return;
+
+    // Check for error condition (transaction rejected or failed)
+    if (confirmError) {
+      console.error("Token batch confirmation failed:", confirmError);
+      message.error("Failed to confirm token batch on blockchain");
+      setError("Confirmation transaction failed or was rejected");
+      setSubmitting(false);
+      // Clear processing IDs
+      setProcessingIds(
+        processingIds.filter((id) => !selectedInvoices.includes(id))
+      );
+      return;
+    }
+
+    if (isConfirmSuccess && !confirmationComplete) {
+      setConfirmationComplete(true);
+      message.success("Token batch issuance confirmed!");
+
+      // Proceed to backend update
+      updateBackend(currentBatchId);
+    }
+  }, [
+    currentBatchId,
+    creationComplete,
+    isConfirmPending,
+    isConfirmSuccess,
+    confirmError,
+    confirmationComplete,
+    processingIds,
+    selectedInvoices,
+    updateBackend,
+    setProcessingIds,
+  ]);
 
   const handleCancel = () => {
     if (submitting) {

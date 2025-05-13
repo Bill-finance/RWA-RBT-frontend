@@ -12,11 +12,17 @@ import {
   Tag,
   Card,
 } from "antd";
-import { SearchOutlined, EyeOutlined, SendOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  EyeOutlined,
+  SendOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
 import { InvoiceBatch, Invoice, invoiceBatchApi } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import BatchDetailModal from "./components/BatchDetailModal";
 import IssueTokenModal from "./components/IssueTokenModal";
+import ConfirmBatchModal from "./components/ConfirmBatchModal";
 import HashText from "@/app/components/ui/HashText";
 
 const { Title } = Typography;
@@ -28,6 +34,7 @@ export default function MyProcessingBatchesPage() {
   const [searchText, setSearchText] = useState("");
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<InvoiceBatch | null>(null);
   const [selectedBatchInvoices, setSelectedBatchInvoices] = useState<Invoice[]>(
     []
@@ -73,6 +80,11 @@ export default function MyProcessingBatchesPage() {
     }
   };
 
+  const handleConfirmBatch = (batch: InvoiceBatch) => {
+    setSelectedBatch(batch);
+    setShowConfirmModal(true);
+  };
+
   const handleIssueToken = (batch: InvoiceBatch) => {
     setSelectedBatch(batch);
     setShowIssueModal(true);
@@ -84,9 +96,19 @@ export default function MyProcessingBatchesPage() {
     setSelectedBatchInvoices([]);
   };
 
+  const handleCloseConfirmModal = () => {
+    setShowConfirmModal(false);
+    setSelectedBatch(null);
+  };
+
   const handleCloseIssueModal = () => {
     setShowIssueModal(false);
     setSelectedBatch(null);
+  };
+
+  const handleConfirmSuccess = () => {
+    handleCloseConfirmModal();
+    loadBatches(); // Refresh the batch list
   };
 
   const handleIssueSuccess = () => {
@@ -157,6 +179,18 @@ export default function MyProcessingBatchesPage() {
             </Tooltip>
 
             {address &&
+              record.payee?.toLowerCase() === address.toLowerCase() && (
+                <Tooltip title="Confirm Batch">
+                  <Button
+                    type="text"
+                    onClick={() => handleConfirmBatch(record)}
+                    // icon={<CheckOutlined />}
+                    icon={<SendOutlined rotate={-45} />}
+                  />
+                </Tooltip>
+              )}
+
+            {/* {address &&
               record.payer?.toLowerCase() === address.toLowerCase() && (
                 <Tooltip title="Issue Token">
                   <Button
@@ -165,7 +199,7 @@ export default function MyProcessingBatchesPage() {
                     icon={<SendOutlined rotate={-45} />}
                   />
                 </Tooltip>
-              )}
+              )} */}
           </Space>
         );
       },
@@ -208,12 +242,19 @@ export default function MyProcessingBatchesPage() {
         selectedBatchInvoices={selectedBatchInvoices}
       />
 
-      <IssueTokenModal
+      <ConfirmBatchModal
+        open={showConfirmModal}
+        onCancel={handleCloseConfirmModal}
+        onSuccess={handleConfirmSuccess}
+        selectedBatch={selectedBatch}
+      />
+
+      {/* <IssueTokenModal
         open={showIssueModal}
         onCancel={handleCloseIssueModal}
         onSuccess={handleIssueSuccess}
         selectedBatch={selectedBatch}
-      />
+      /> */}
     </div>
   );
 }

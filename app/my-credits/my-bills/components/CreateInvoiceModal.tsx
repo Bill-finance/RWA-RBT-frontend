@@ -3,6 +3,7 @@ import { Button, DatePicker, Input, Modal } from "antd";
 
 import { Form } from "antd";
 import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 
 interface CreateInvoiceModalProps {
   open: boolean;
@@ -19,7 +20,7 @@ function CreateInvoiceModal({
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const { address } = useAccount();
   // 重置所有状态
   const handleCancel = () => {
     setError(null);
@@ -65,8 +66,11 @@ function CreateInvoiceModal({
     if (open) {
       setError(null);
       form.resetFields();
+      form.setFieldsValue({
+        payer: address,
+      });
     }
-  }, [open, form]);
+  }, [open, form, address]);
 
   return (
     <Modal
@@ -91,19 +95,20 @@ function CreateInvoiceModal({
     >
       <Form form={form} layout="vertical" initialValues={{ currency: "USD" }}>
         <Form.Item
-          name="payee"
-          label="Payee Address"
-          rules={[{ required: true, message: "Please enter payee address" }]}
-        >
-          <Input placeholder="Enter payee wallet address" />
-        </Form.Item>
-        <Form.Item
           name="payer"
           label="Payer Address"
           rules={[{ required: true, message: "Please enter payer address" }]}
         >
           <Input placeholder="Enter payer wallet address" />
         </Form.Item>
+        <Form.Item
+          name="payee"
+          label="Payee Address"
+          rules={[{ required: true, message: "Please enter payee address" }]}
+        >
+          <Input placeholder="Enter payee wallet address" />
+        </Form.Item>
+
         <Form.Item
           name="amount"
           label="Amount"

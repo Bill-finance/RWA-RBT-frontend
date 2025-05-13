@@ -41,15 +41,13 @@ function IssueTokenModal({
 }: IssueTokenModalProps) {
   const [form] = Form.useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<string | null>(null);
   const [tokenCreationComplete, setTokenCreationComplete] = useState(false);
   const [batchInvoices, setBatchInvoices] = useState<Invoice[]>([]);
-  const [invoicesLoading, setInvoicesLoading] = useState(false);
-  const [invoicesError, setInvoicesError] = useState<string | null>(null);
 
-  // Get contract hooks for token creation
+  // Get contract hooks
   const { useCreateToken } = useToken();
-
   const {
     createToken: executeCreateToken,
     isPending: isTokenPending,
@@ -65,57 +63,27 @@ function IssueTokenModal({
         interest_rate_apy: "5",
         maturity_date: dayjs().add(1, "year"),
       });
+      // setError(null);
       setCurrentTokenId(null);
       setTokenCreationComplete(false);
       setIsSubmitting(false);
-      setInvoicesError(null);
-      setBatchInvoices([]);
     }
   }, [open, form]);
 
   // Load batch invoices when modal opens
   useEffect(() => {
     if (open && selectedBatch) {
-      setInvoicesLoading(true);
-      setInvoicesError(null);
-
       // Load invoices for the batch
       invoiceBatchApi
         .detail(selectedBatch.id)
-        .then(([batchResponse, invoicesResponse]) => {
-          console.log("Batch API responses:", {
-            batchResponse: batchResponse?.data,
-            invoicesResponse: invoicesResponse?.data,
-          });
-
+        .then(([, invoicesResponse]) => {
           if (invoicesResponse.code === 200) {
-            if (invoicesResponse.data && invoicesResponse.data.length > 0) {
-              setBatchInvoices(invoicesResponse.data);
-              console.log("Loaded invoices:", invoicesResponse.data);
-            } else {
-              setInvoicesError(
-                "No invoices found for this batch. Please ensure invoices are linked to this batch."
-              );
-              message.warning("No invoices found for this batch");
-            }
-          } else {
-            setInvoicesError(
-              `Failed to load invoices: ${invoicesResponse.msg}`
-            );
-            message.error(
-              invoicesResponse.msg || "Failed to load batch invoices"
-            );
+            setBatchInvoices(invoicesResponse.data);
           }
         })
         .catch((error) => {
           console.error("Failed to load batch invoices:", error);
-          setInvoicesError(
-            "Network error while loading invoices. Please try again."
-          );
-          message.error("Failed to load batch invoices");
-        })
-        .finally(() => {
-          setInvoicesLoading(false);
+          // setError("Failed to load batch invoices. Please try again.");
         });
     }
   }, [open, selectedBatch]);
@@ -128,6 +96,7 @@ function IssueTokenModal({
     if (tokenError) {
       console.error("Token creation failed:", tokenError);
       message.error("Failed to create token on blockchain");
+      // setError("Transaction failed or was rejected");
       setIsSubmitting(false);
       return;
     }
@@ -206,32 +175,30 @@ function IssueTokenModal({
           }
         }
       }
+
+      // if (!backendUpdateSuccess) {
+      //   setError(
+      //     "Token created on blockchain, but backend could not be updated. Please contact support."
+      //   );
+      // }
     } catch (error) {
       console.error("Error updating backend:", error);
       message.error("Failed to update backend with token information");
+      // setError(
+      //   error instanceof Error ? error.message : "Failed to update backend"
+      // );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle create token
-  const handleCreateToken = async () => {
+  const handleSubmit = async () => {
     if (!selectedBatch) return;
-
-    // Check if invoices are loaded
-    if (batchInvoices.length === 0) {
-      if (invoicesLoading) {
-        message.warning("Please wait while invoices are loading...");
-        return;
-      } else {
-        message.error("No invoices found for this batch. Cannot create token.");
-        return;
-      }
-    }
 
     try {
       const values = await form.validateFields();
       setIsSubmitting(true);
+      // setError(null);
 
       // Generate token ID
       const newTokenId = `TOKEN-${selectedBatch.id}-${Date.now()}`;
@@ -246,67 +213,79 @@ function IssueTokenModal({
       ); // Convert to basis points
 
       // Create token on blockchain
-      message.loading("Creating token on blockchain...", 0);
+      try {
+        message.loading("Creating token on blockchain...", 0);
 
-      // Extract invoice numbers from loaded invoices
-      const invoiceNumbers = batchInvoices.map(
-        (invoice) => invoice.invoice_number
-      );
+        // Extract invoice numbers from loaded invoices
+        const invoiceNumbers = batchInvoices.map(
+          (invoice) => invoice.invoice_number
+        );
 
-      console.log("Creating token with invoices:", {
-        batchId: selectedBatch.id,
-        invoiceCount: invoiceNumbers.length,
-        invoiceNumbers,
-      });
+        if (invoiceNumbers.length === 0) {
+          throw new Error("No invoices found for this batch");
+        }
 
-      // 获取稳定币地址并验证
-      const stableTokenAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+        // 获取稳定币地址并验证
+        // 直接使用环境变量，确保其已正确配置
+        const stableTokenAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 
-      console.log("Debug stableToken info:", {
-        batchId: selectedBatch.id,
-        invoiceCount: invoiceNumbers.length,
-        stableTokenAddress,
-        envLoaded: !!process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
-        env: process.env,
-      });
+        console.log("Debug stableToken info:", {
+          batchId: selectedBatch.id,
+          invoiceCount: invoiceNumbers.length,
+          stableTokenAddress,
+          envLoaded: !!process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
+          env: process.env,
+        });
 
-      if (!stableTokenAddress) {
-        const errorMsg =
-          "Stable token address is not configured in environment variables";
-        message.error("Missing stable token address configuration");
+        if (!stableTokenAddress) {
+          const errorMsg =
+            "Stable token address is not configured in environment variables";
+          // setError(errorMsg);
+          message.error("Missing stable token address configuration");
+          setIsSubmitting(false);
+          throw new Error(errorMsg);
+        }
+
+        if (
+          stableTokenAddress.length < 42 ||
+          (!stableTokenAddress.startsWith("0x") &&
+            !stableTokenAddress.startsWith("0X"))
+        ) {
+          const errorMsg = `Invalid stable token address format: ${stableTokenAddress}`;
+          // setError(errorMsg);
+          message.error("Invalid stable token address format");
+          setIsSubmitting(false);
+          throw new Error(errorMsg);
+        }
+
+        // 确保地址格式正确
+        const formattedAddress =
+          stableTokenAddress.startsWith("0x") ||
+          stableTokenAddress.startsWith("0X")
+            ? (stableTokenAddress as `0x${string}`)
+            : (`0x${stableTokenAddress}` as `0x${string}`);
+
+        await executeCreateToken(
+          selectedBatch.id,
+          invoiceNumbers,
+          formattedAddress,
+          Math.floor(Date.now() / 1000).toString(), // minTerm - 当前时间作为最小期限，确保整数
+          maturityTimestamp.toString(), // maxTerm - 到期日作为最大期限，确保整数
+          interestRateBasisPoints.toString() // 利率(基点)，确保整数
+        );
+      } catch (err) {
+        console.error("Failed to initiate token creation:", err);
+        message.error("Failed to create token");
         setIsSubmitting(false);
-        throw new Error(errorMsg);
+        throw err;
       }
-
-      if (
-        stableTokenAddress.length < 42 ||
-        (!stableTokenAddress.startsWith("0x") &&
-          !stableTokenAddress.startsWith("0X"))
-      ) {
-        const errorMsg = `Invalid stable token address format: ${stableTokenAddress}`;
-        message.error("Invalid stable token address format");
-        setIsSubmitting(false);
-        throw new Error(errorMsg);
-      }
-
-      // 确保地址格式正确
-      const formattedAddress =
-        stableTokenAddress.startsWith("0x") ||
-        stableTokenAddress.startsWith("0X")
-          ? (stableTokenAddress as `0x${string}`)
-          : (`0x${stableTokenAddress}` as `0x${string}`);
-
-      await executeCreateToken(
-        selectedBatch.id,
-        invoiceNumbers,
-        formattedAddress,
-        Math.floor(Date.now() / 1000).toString(), // minTerm - 当前时间作为最小期限，确保整数
-        maturityTimestamp.toString(), // maxTerm - 到期日作为最大期限，确保整数
-        interestRateBasisPoints.toString() // 利率(基点)，确保整数
-      );
-    } catch (err) {
-      console.error("Failed to create token:", err);
-      message.error("Failed to create token");
+    } catch (err: unknown) {
+      console.error("Form validation or submission failed:", err);
+      // setError(
+      //   err instanceof Error
+      //     ? err.message
+      //     : "An error occurred while creating the token"
+      // );
       setIsSubmitting(false);
       message.destroy();
     }
@@ -330,13 +309,11 @@ function IssueTokenModal({
         <Button
           key="submit"
           type="primary"
-          loading={isSubmitting || invoicesLoading}
-          onClick={handleCreateToken}
-          disabled={
-            isSubmitting || invoicesLoading || batchInvoices.length === 0
-          }
+          loading={isSubmitting}
+          onClick={handleSubmit}
+          disabled={isSubmitting}
         >
-          Issue Token
+          Confirm to Issue
         </Button>,
       ]}
     >
@@ -381,28 +358,6 @@ function IssueTokenModal({
               {selectedBatch.invoice_count}
             </Descriptions.Item>
           </Descriptions>
-
-          {invoicesLoading && (
-            <div className="mb-4 text-center">
-              <p>Loading invoices...</p>
-            </div>
-          )}
-
-          {invoicesError && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-              <p>
-                <strong>Error:</strong> {invoicesError}
-              </p>
-            </div>
-          )}
-
-          {!invoicesLoading && batchInvoices.length > 0 && (
-            <div className="mb-4">
-              <p className="text-green-500">
-                ✓ {batchInvoices.length} invoices loaded successfully
-              </p>
-            </div>
-          )}
 
           <Title level={5} style={{ color: "#e3e3e3ee", marginBottom: 10 }}>
             Token Parameters

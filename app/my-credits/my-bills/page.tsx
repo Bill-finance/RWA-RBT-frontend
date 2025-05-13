@@ -27,6 +27,8 @@ import { message } from "@/app/components/Message";
 import CreateInvoiceModal from "./components/CreateInvoiceModal";
 import CreateTokenBatchModal from "./components/CreateTokenBatchModal";
 import dayjs from "dayjs";
+import { ColumnsType } from "antd/es/table";
+import HashText from "@/app/components/ui/HashText";
 
 const { Title } = Typography;
 
@@ -224,8 +226,10 @@ export default function MyBillsPage() {
 
   const columns = [
     {
-      title: "Select",
+      title: "",
       key: "select",
+      fixed: "left",
+      width: 64,
       align: "center" as const,
       // Antd 的 Checkbox 不够灵活
       render: (_: unknown, record: Invoice) => {
@@ -278,16 +282,21 @@ export default function MyBillsPage() {
       title: "Currency",
       dataIndex: "currency",
       key: "currency",
+      width: 100,
+    },
+    {
+      title: "Payer",
+      dataIndex: "payer",
+      key: "payer",
+      width: 150,
+      render: (text: string) => <HashText text={text} />,
     },
     {
       title: "Payee",
       dataIndex: "payee",
       key: "payee",
-      render: (text: string) => (
-        <Tooltip title={text}>
-          <span>{text.slice(0, 10)}...</span>
-        </Tooltip>
-      ),
+      width: 150,
+      render: (text: string) => <HashText text={text} />,
     },
     {
       title: "Status",
@@ -308,8 +317,10 @@ export default function MyBillsPage() {
       render: (timestamp: number) => formatTimestamp(timestamp),
     },
     {
-      title: "Actions",
+      title: "",
       key: "actions",
+      fixed: "right",
+      width: 64,
       render: (_: unknown, record: Invoice) => (
         <Space>
           <Tooltip title="View Details">
@@ -397,12 +408,12 @@ export default function MyBillsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Card className="bg-zinc-900 border-zinc-800 shadow-lg mb-8">
-        <div className="flex justify-between items-center mb-6">
+      <Card className="bg-zinc-900 border-zinc-800 shadow-lg mb-8 ">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <Title level={2} style={{ color: "white", margin: 0 }}>
             My Invoices
           </Title>
-          <Space>
+          <Space wrap className="w-full md:w-auto">
             <Input
               placeholder="Search invoices..."
               prefix={<SearchOutlined />}
@@ -435,7 +446,8 @@ export default function MyBillsPage() {
         </div>
 
         <Table
-          columns={columns}
+          scroll={{ x: 1000 }}
+          columns={columns as ColumnsType<Invoice>}
           dataSource={filteredInvoices}
           rowKey="id"
           loading={isLoading}
