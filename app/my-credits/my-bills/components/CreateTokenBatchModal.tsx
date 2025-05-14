@@ -1,5 +1,5 @@
 import { Button, Form, Input, InputNumber, Modal, message } from "antd";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
 import { invoiceApi } from "@/app/utils/apis";
 
@@ -46,125 +46,127 @@ function CreateTokenBatchModal({
   } = useCreateTokenBatch();
 
   const {
-    confirmTokenBatchIssue,
     isPending: isConfirmPending,
     isSuccess: isConfirmSuccess,
     error: confirmError,
   } = useConfirmTokenBatchIssue();
 
   // Update backend after confirmation is complete
-  const updateBackend = async (batchId: string) => {
-    try {
-      // First verify if the batch was properly created by checking invoices
-      let verificationAttempts = 0;
-      let allInvoicesVerified = false;
+  const updateBackend = useCallback(
+    async (batchId: string) => {
+      try {
+        // First verify if the batch was properly created by checking invoices
+        let verificationAttempts = 0;
+        let allInvoicesVerified = false;
 
-      // Try verification a few times with delays
-      while (verificationAttempts < 3 && !allInvoicesVerified) {
-        verificationAttempts++;
-        allInvoicesVerified = true;
+        // Try verification a few times with delays
+        while (verificationAttempts < 3 && !allInvoicesVerified) {
+          verificationAttempts++;
+          allInvoicesVerified = true;
 
-        // Check a sample of invoices to be sure
-        for (let i = 0; i < Math.min(2, invoiceNumbers.length); i++) {
-          try {
-            const detailResponse = await invoiceApi.detail(invoiceNumbers[i]);
-
-            // If we can't verify the token batch in the invoice, mark as not verified
-            if (detailResponse.code !== 200 || !detailResponse.data.length) {
-              console.warn(`Invoice ${invoiceNumbers[i]} details not found`);
+          // Check a sample of invoices to be sure
+          for (let i = 0; i < Math.min(2, invoiceNumbers.length); i++) {
+            try {
+              const detailResponse = await invoiceApi.detail(invoiceNumbers[i]);
+              if (detailResponse.code !== 200 || !detailResponse.data.length) {
+                console.warn(`Invoice ${invoiceNumbers[i]} details not found`);
+                allInvoicesVerified = false;
+                break;
+              }
+            } catch (err) {
+              console.error(
+                `Error checking invoice ${invoiceNumbers[i]}:`,
+                err
+              );
               allInvoicesVerified = false;
               break;
             }
+          }
 
-            // Optional: check if token_batch is set in the invoice
-            // Uncomment if your API actually returns this field
-            // if (!detailResponse.data[0].token_batch) {
-            //   console.warn(`Invoice ${invoiceNumbers[i]} token batch not set`);
-            //   allInvoicesVerified = false;
-            //   break;
-            // }
-          } catch (err) {
-            console.error(`Error checking invoice ${invoiceNumbers[i]}:`, err);
-            allInvoicesVerified = false;
-            break;
+          if (!allInvoicesVerified && verificationAttempts < 3) {
+            // Wait before trying again
+            await new Promise((resolve) => setTimeout(resolve, 3000));
           }
         }
 
-        if (!allInvoicesVerified && verificationAttempts < 3) {
-          // Wait before trying again
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-      }
+        // Even if verification fails, we'll still try to update the backend
+        // since the blockchain transaction was successful
 
-      // Even if verification fails, we'll still try to update the backend
-      // since the blockchain transaction was successful
+        // Update backend via API with multiple retries
+        let backendUpdateAttempts = 0;
+        let backendUpdateSuccess = false;
 
-      // Update backend via API with multiple retries
-      let backendUpdateAttempts = 0;
-      let backendUpdateSuccess = false;
+        while (backendUpdateAttempts < 3 && !backendUpdateSuccess) {
+          backendUpdateAttempts++;
 
-      while (backendUpdateAttempts < 3 && !backendUpdateSuccess) {
-        backendUpdateAttempts++;
+          try {
+            const response = await invoiceApi.issue(selectedInvoices, batchId);
 
-        try {
-          const response = await invoiceApi.issue(selectedInvoices, batchId);
-
-          if (response.code === 0 || response.code === 200) {
-            message.success(
-              "Invoices issued successfully as batch: " + batchId
-            );
-            backendUpdateSuccess = true;
-            // Refresh the list and close modal
-            onSuccess();
-            onCancel();
-          } else {
+            if (response.code === 0 || response.code === 200) {
+              message.success(
+                "Invoices issued successfully as batch: " + batchId
+              );
+              backendUpdateSuccess = true;
+              // Refresh the list and close modal
+              onSuccess();
+              onCancel();
+            } else {
+              if (backendUpdateAttempts < 3) {
+                console.warn(
+                  `Backend update attempt ${backendUpdateAttempts} failed:`,
+                  response.msg
+                );
+                // Wait before retrying
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+              } else {
+                throw new Error(
+                  response.msg ||
+                    "Failed to update backend after multiple attempts"
+                );
+              }
+            }
+          } catch (apiError) {
             if (backendUpdateAttempts < 3) {
-              console.warn(
-                `Backend update attempt ${backendUpdateAttempts} failed:`,
-                response.msg
+              console.error(
+                `Backend API error on attempt ${backendUpdateAttempts}:`,
+                apiError
               );
               // Wait before retrying
               await new Promise((resolve) => setTimeout(resolve, 3000));
             } else {
-              throw new Error(
-                response.msg ||
-                  "Failed to update backend after multiple attempts"
-              );
+              throw apiError;
             }
           }
-        } catch (apiError) {
-          if (backendUpdateAttempts < 3) {
-            console.error(
-              `Backend API error on attempt ${backendUpdateAttempts}:`,
-              apiError
-            );
-            // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-          } else {
-            throw apiError;
-          }
         }
-      }
 
-      if (!backendUpdateSuccess) {
+        if (!backendUpdateSuccess) {
+          setError(
+            "Blockchain transactions were successful, but backend could not be updated. Please contact support."
+          );
+        }
+      } catch (error) {
+        console.error("Error updating backend:", error);
+        message.error("Failed to update backend status");
         setError(
-          "Blockchain transactions were successful, but backend could not be updated. Please contact support."
+          error instanceof Error ? error.message : "Failed to update backend"
+        );
+      } finally {
+        setSubmitting(false);
+        // Clear processing IDs
+        setProcessingIds(
+          processingIds.filter((id) => !selectedInvoices.includes(id))
         );
       }
-    } catch (error) {
-      console.error("Error updating backend:", error);
-      message.error("Failed to update backend status");
-      setError(
-        error instanceof Error ? error.message : "Failed to update backend"
-      );
-    } finally {
-      setSubmitting(false);
-      // Clear processing IDs
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
-    }
-  };
+    },
+    [
+      selectedInvoices,
+      processingIds,
+      setProcessingIds,
+      invoiceNumbers,
+      onSuccess,
+      onCancel,
+    ]
+  );
 
   // Reset all states when modal opens/closes
   useEffect(() => {
@@ -207,17 +209,22 @@ function CreateTokenBatchModal({
       message.success("Token batch created successfully!");
 
       // Proceed to confirmation step
-      const confirmBatch = async () => {
-        try {
-          message.info("Confirming token batch issuance...");
-          await confirmTokenBatchIssue(currentBatchId);
-        } catch (err) {
-          console.error("Failed to initiate token batch confirmation:", err);
-          message.error("Failed to confirm token batch issuance");
-        }
-      };
+      // const confirmBatch = async () => {
+      //   try {
+      //     message.info("Confirming token batch issuance...");
+      //     await confirmTokenBatchIssue(currentBatchId);
+      //   } catch (err) {
+      //     console.error("Failed to initiate token batch confirmation:", err);
+      //     message.error("Failed to confirm token batch issuance");
+      //   }
+      // };
 
-      confirmBatch();
+      // confirmBatch();
+
+      // Skip confirmation and directly update backend
+      if (currentBatchId) {
+        updateBackend(currentBatchId);
+      }
     }
   }, [
     currentBatchId,
@@ -227,8 +234,9 @@ function CreateTokenBatchModal({
     creationComplete,
     processingIds,
     selectedInvoices,
-    confirmTokenBatchIssue,
+    // confirmTokenBatchIssue,
     setProcessingIds,
+    updateBackend,
   ]);
 
   // Monitor token batch confirmation status

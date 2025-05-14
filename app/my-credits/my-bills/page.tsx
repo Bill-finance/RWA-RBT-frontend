@@ -43,6 +43,7 @@ export default function MyBillsPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [processingIds, setProcessingIds] = useState<string[]>([]);
+  const { address } = useAccount();
 
   const { useBatchCreateInvoices } = useInvoice();
   const { batchCreateInvoices, isPending, isSuccess, error } =
@@ -94,8 +95,6 @@ export default function MyBillsPage() {
       message.warning("Please select at least one invoice to issue");
       return;
     }
-
-    // Show the token batch modal to collect user input
     setShowTokenBatchModal(true);
   };
 
@@ -221,7 +220,7 @@ export default function MyBillsPage() {
     if (!timestamp || timestamp === 0) {
       return "Not set";
     }
-    return dayjs(timestamp * 1000).format("YYYY-MM-DD HH:mm");
+    return dayjs(timestamp * 1000).format("YYYY-MM-DD");
   };
 
   const columns = [
@@ -233,8 +232,13 @@ export default function MyBillsPage() {
       align: "center" as const,
       // Antd 的 Checkbox 不够灵活
       render: (_: unknown, record: Invoice) => {
+        console.log("record payee", record.payee, address);
+        const isPayee = record.payee === address;
         const isDisabled =
-          record.status !== "VERIFIED" || processingIds.includes(record.id);
+          !isPayee ||
+          record.status !== "VERIFIED" ||
+          processingIds.includes(record.id);
+
         return (
           <Input
             style={{
@@ -285,16 +289,16 @@ export default function MyBillsPage() {
       width: 100,
     },
     {
-      title: "Payer",
-      dataIndex: "payer",
-      key: "payer",
+      title: "Payee",
+      dataIndex: "payee",
+      key: "payee",
       width: 150,
       render: (text: string) => <HashText text={text} />,
     },
     {
-      title: "Payee",
-      dataIndex: "payee",
-      key: "payee",
+      title: "Payer",
+      dataIndex: "payer",
+      key: "payer",
       width: 150,
       render: (text: string) => <HashText text={text} />,
     },
@@ -320,7 +324,7 @@ export default function MyBillsPage() {
       title: "",
       key: "actions",
       fixed: "right",
-      width: 64,
+      // width: 64,
       render: (_: unknown, record: Invoice) => (
         <Space>
           <Tooltip title="View Details">
@@ -330,7 +334,7 @@ export default function MyBillsPage() {
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
-          {record.status === "PENDING" && (
+          {record.status === "PENDING" && address === record.payer && (
             <Tooltip title="Verify">
               <Button
                 icon={<CheckOutlined />}

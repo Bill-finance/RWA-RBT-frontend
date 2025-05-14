@@ -1,5 +1,5 @@
 import { Button, Modal, Typography, Tag, Descriptions } from "antd";
-import { InvoiceBatch } from "@/app/utils/apis";
+import { invoiceApi, InvoiceBatch, tokenApi } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import { useState, useEffect } from "react";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
@@ -117,23 +117,46 @@ function ConfirmBatchModal({
     }
   }, [isConfirmPending]);
   // Handle confirm action
+
   const handleConfirm = async () => {
     if (!selectedBatch) return;
 
     try {
       setIsSubmitting(true);
       message.loading("Confirming batch on blockchain...", 0);
+      // const invoiceBatchDetails = await invoiceApi.detail(selectedBatch.id);
 
-      // Call contract to confirm token batch
       await confirmTokenBatchIssue(selectedBatch.id);
 
-      // The confirmation status will be handled in the useEffect
+      // 设置默认到期日期(30天后)
     } catch (err) {
       console.error("Batch confirmation failed:", err);
       setIsSubmitting(false);
       message.destroy();
     }
   };
+
+  useEffect(() => {
+    if (!isConfirmPending) {
+      if (isConfirmSuccess) {
+        const defaultMaturityDate = Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+        tokenApi.createToken({
+          batch_id: selectedBatch.id,
+          token_value: selectedBatch.total_amount,
+          total_token_supply: selectedBatch.total_amount,
+          blockchain_token_id: selectedBatch.id,
+          interest_rate_apy: 5, // 默认利率5%
+          maturity_date: defaultMaturityDate,
+        });
+
+        message.success("Token created successfully!");
+        setTimeout(() => onSuccess(), 1500);
+      }
+    }
+  }, [isConfirmSuccess]);
+
+  // TODO 目前这个交互逻辑有问题，不应该是 payer 来选择利率、还款期限等，不过闲着么用着
 
   return (
     <Modal
@@ -157,7 +180,7 @@ function ConfirmBatchModal({
           onClick={handleConfirm}
           disabled={isSubmitting}
         >
-          Confirm Batch
+          Confirm
         </Button>,
       ]}
     >

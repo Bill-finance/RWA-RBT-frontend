@@ -33,7 +33,7 @@ export default function MyProcessingBatchesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showIssueModal, setShowIssueModal] = useState(false);
+  // const [_, setShowIssueModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<InvoiceBatch | null>(null);
   const [selectedBatchInvoices, setSelectedBatchInvoices] = useState<Invoice[]>(
@@ -85,10 +85,10 @@ export default function MyProcessingBatchesPage() {
     setShowConfirmModal(true);
   };
 
-  const handleIssueToken = (batch: InvoiceBatch) => {
-    setSelectedBatch(batch);
-    setShowIssueModal(true);
-  };
+  // const handleIssueToken = (batch: InvoiceBatch) => {
+  //   setSelectedBatch(batch);
+  //   setShowIssueModal(true);
+  // };
 
   const handleCloseDetailModal = () => {
     setShowDetailModal(false);
@@ -101,20 +101,20 @@ export default function MyProcessingBatchesPage() {
     setSelectedBatch(null);
   };
 
-  const handleCloseIssueModal = () => {
-    setShowIssueModal(false);
-    setSelectedBatch(null);
-  };
+  // const handleCloseIssueModal = () => {
+  //   // setShowIssueModal(false);
+  //   setSelectedBatch(null);
+  // };
 
   const handleConfirmSuccess = () => {
     handleCloseConfirmModal();
     loadBatches(); // Refresh the batch list
   };
 
-  const handleIssueSuccess = () => {
-    handleCloseIssueModal();
-    loadBatches(); // Refresh the batch list
-  };
+  // const handleIssueSuccess = () => {
+  //   handleCloseIssueModal();
+  //   loadBatches(); // Refresh the batch list
+  // };
 
   const filteredBatches = batches.filter(
     (batch) =>
@@ -178,17 +178,16 @@ export default function MyProcessingBatchesPage() {
               />
             </Tooltip>
 
-            {address &&
-              record.payee?.toLowerCase() === address.toLowerCase() && (
-                <Tooltip title="Confirm Batch">
-                  <Button
-                    type="text"
-                    onClick={() => handleConfirmBatch(record)}
-                    // icon={<CheckOutlined />}
-                    icon={<SendOutlined rotate={-45} />}
-                  />
-                </Tooltip>
-              )}
+            {address && record.payer === address && (
+              <Tooltip title="Confirm Batch">
+                <Button
+                  type="text"
+                  onClick={() => handleConfirmBatch(record)}
+                  icon={<CheckOutlined />}
+                  // icon={<SendOutlined rotate={-45} />}
+                />
+              </Tooltip>
+            )}
 
             {/* {address &&
               record.payer?.toLowerCase() === address.toLowerCase() && (
