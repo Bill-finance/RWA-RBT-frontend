@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Web3Modal } from "./components/Web3Modal";
 import Header from "./components/Header";
 import ThemeProvider from "./components/ThemeProvider";
 import { App as AntdApp } from "antd";
 import { MessageProviderWithHandler } from "./components/Message";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +22,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-black text-white`}>
-        <Web3Modal>
+        {/* <Web3Modal> */}
+        <Providers>
           <ThemeProvider>
             <AntdApp>
               <MessageProviderWithHandler>
@@ -31,7 +32,7 @@ export default function RootLayout({
               </MessageProviderWithHandler>
             </AntdApp>
           </ThemeProvider>
-        </Web3Modal>
+        </Providers>
       </body>
     </html>
   );

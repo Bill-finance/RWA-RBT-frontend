@@ -12,16 +12,10 @@ import {
   Tag,
   Card,
 } from "antd";
-import {
-  SearchOutlined,
-  EyeOutlined,
-  SendOutlined,
-  CheckOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined, EyeOutlined, CheckOutlined } from "@ant-design/icons";
 import { InvoiceBatch, Invoice, invoiceBatchApi } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
 import BatchDetailModal from "./components/BatchDetailModal";
-import IssueTokenModal from "./components/IssueTokenModal";
 import ConfirmBatchModal from "./components/ConfirmBatchModal";
 import HashText from "@/app/components/ui/HashText";
 

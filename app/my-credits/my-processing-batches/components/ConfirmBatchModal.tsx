@@ -1,10 +1,16 @@
 import { Button, Modal, Typography, Tag, Descriptions } from "antd";
-import { invoiceApi, InvoiceBatch, tokenApi } from "@/app/utils/apis";
+import { InvoiceBatch, tokenApi } from "@/app/utils/apis";
 import { message } from "@/app/components/Message";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
+import { Form } from "antd";
 
 const { Title } = Typography;
+
+interface TokenFormValues {
+  interest_rate_apy: number;
+  maturity_date: Date;
+}
 
 interface ConfirmBatchModalProps {
   open: boolean;
@@ -20,10 +26,11 @@ function ConfirmBatchModal({
   selectedBatch,
 }: ConfirmBatchModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [batchConfirmed, setBatchConfirmed] = useState(false);
 
   // Get contract hooks for batch confirmation
   const { useConfirmTokenBatchIssue } = useInvoice();
+
+  const [form] = Form.useForm<TokenFormValues>();
 
   const {
     confirmTokenBatchIssue,
@@ -32,103 +39,117 @@ function ConfirmBatchModal({
     error: confirmError,
   } = useConfirmTokenBatchIssue();
 
-  const updateBackend = async (tokenId: string) => {
-    if (!selectedBatch) return;
+  const updateBackend = useCallback(
+    async (tokenId: string) => {
+      if (!selectedBatch) return;
 
-    try {
-      let backendUpdateAttempts = 0;
-      let backendUpdateSuccess = false;
+      try {
+        let backendUpdateAttempts = 0;
+        let backendUpdateSuccess = false;
 
-      // Try up to 3 times to update the backend
-      while (backendUpdateAttempts < 3 && !backendUpdateSuccess) {
-        backendUpdateAttempts++;
+        // Try up to 3 times to update the backend
+        while (backendUpdateAttempts < 3 && !backendUpdateSuccess) {
+          backendUpdateAttempts++;
 
-        try {
-          const formValues = form.getFieldsValue() as TokenFormValues;
-
-          const response = await tokenApi.createToken({
-            batch_id: selectedBatch.id,
-            interest_rate_apy: Number(formValues.interest_rate_apy),
-            maturity_date: formValues.maturity_date.valueOf(),
-            token_value: selectedBatch.total_amount,
-            total_token_supply: selectedBatch.total_amount,
-            blockchain_token_id: tokenId,
-          });
-
-          if (response.code === 200) {
-            message.success(
-              "Successfully created and recorded token from batch"
+          try {
+            // Use default values if form is not available
+            const defaultMaturityDate = new Date(
+              Date.now() + 30 * 24 * 60 * 60 * 1000
             );
-            backendUpdateSuccess = true;
-            onSuccess();
-          } else {
+
+            const response = await tokenApi.createToken({
+              batch_id: selectedBatch.id,
+              interest_rate_apy: 5, // Default interest rate 5%
+              maturity_date: defaultMaturityDate.valueOf(),
+              token_value: selectedBatch.total_amount,
+              total_token_supply: selectedBatch.total_amount,
+              blockchain_token_id: tokenId,
+            });
+
+            if (response.code === 200) {
+              message.success(
+                "Successfully created and recorded token from batch"
+              );
+              backendUpdateSuccess = true;
+              onSuccess();
+            } else {
+              if (backendUpdateAttempts < 3) {
+                console.warn(
+                  `Backend update attempt ${backendUpdateAttempts} failed:`,
+                  response.msg
+                );
+                // Wait before retrying
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+              } else {
+                throw new Error(
+                  response.msg ||
+                    "Failed to update backend after multiple attempts"
+                );
+              }
+            }
+          } catch (apiError) {
             if (backendUpdateAttempts < 3) {
-              console.warn(
-                `Backend update attempt ${backendUpdateAttempts} failed:`,
-                response.msg
+              console.error(
+                `Backend API error on attempt ${backendUpdateAttempts}:`,
+                apiError
               );
               // Wait before retrying
               await new Promise((resolve) => setTimeout(resolve, 3000));
             } else {
-              throw new Error(
-                response.msg ||
-                  "Failed to update backend after multiple attempts"
-              );
+              throw apiError;
             }
           }
-        } catch (apiError) {
-          if (backendUpdateAttempts < 3) {
-            console.error(
-              `Backend API error on attempt ${backendUpdateAttempts}:`,
-              apiError
-            );
-            // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-          } else {
-            throw apiError;
-          }
         }
+      } catch (error) {
+        console.error("Error updating backend:", error);
+        message.error("Failed to update backend with token information");
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (error) {
-      console.error("Error updating backend:", error);
-      message.error("Failed to update backend with token information");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+    [onSuccess, selectedBatch]
+  );
 
+  // TODO: 目前是 mock 数据，后面改成从后端获取
   // Reset states when modal opens
   useEffect(() => {
     if (open) {
-      setBatchConfirmed(false);
       setIsSubmitting(false);
+
+      // Initialize form with default values
+      form.setFieldsValue({
+        interest_rate_apy: 5,
+        maturity_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
     }
-  }, [open]);
+  }, [open, form]);
 
   useEffect(() => {
     if (!isConfirmPending) {
-      if (isConfirmSuccess) {
+      if (isConfirmSuccess && selectedBatch) {
         message.success("Batch confirmed successfully!");
-        setTimeout(() => onSuccess(), 1500);
         updateBackend(selectedBatch.id);
       } else if (confirmError) {
         message.error("Failed to confirm batch on blockchain");
+        setIsSubmitting(false);
       }
     }
-  }, [isConfirmPending]);
-  // Handle confirm action
+  }, [
+    isConfirmPending,
+    isConfirmSuccess,
+    confirmError,
+    selectedBatch,
+    updateBackend,
+  ]);
 
+  // Handle confirm action
   const handleConfirm = async () => {
     if (!selectedBatch) return;
 
     try {
       setIsSubmitting(true);
       message.loading("Confirming batch on blockchain...", 0);
-      // const invoiceBatchDetails = await invoiceApi.detail(selectedBatch.id);
-
       await confirmTokenBatchIssue(selectedBatch.id);
-
-      // 设置默认到期日期(30天后)
     } catch (err) {
       console.error("Batch confirmation failed:", err);
       setIsSubmitting(false);
@@ -136,27 +157,7 @@ function ConfirmBatchModal({
     }
   };
 
-  useEffect(() => {
-    if (!isConfirmPending) {
-      if (isConfirmSuccess) {
-        const defaultMaturityDate = Date.now() + 30 * 24 * 60 * 60 * 1000;
-
-        tokenApi.createToken({
-          batch_id: selectedBatch.id,
-          token_value: selectedBatch.total_amount,
-          total_token_supply: selectedBatch.total_amount,
-          blockchain_token_id: selectedBatch.id,
-          interest_rate_apy: 5, // 默认利率5%
-          maturity_date: defaultMaturityDate,
-        });
-
-        message.success("Token created successfully!");
-        setTimeout(() => onSuccess(), 1500);
-      }
-    }
-  }, [isConfirmSuccess]);
-
-  // TODO 目前这个交互逻辑有问题，不应该是 payer 来选择利率、还款期限等，不过闲着么用着
+  // Remove duplicate token creation useEffect, since we already handle this in updateBackend
 
   return (
     <Modal

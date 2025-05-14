@@ -6,6 +6,9 @@ import { http, createConfig } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { Chain } from "viem";
 
+import "@rainbow-me/rainbowkit/styles.css";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+
 const queryClient = new QueryClient();
 
 // Define the PHASE testnet chain
@@ -66,7 +69,9 @@ const config = createConfig({
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>{children}</RainbowKitProvider>
+      </QueryClientProvider>
     </WagmiProvider>
   );
 }

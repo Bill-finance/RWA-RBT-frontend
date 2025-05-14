@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAccount, useConnect, useDisconnect, useSignMessage } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { useAccount, useSignMessage } from "wagmi";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button, Dropdown, message } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import WalletButton from "./ui/WalletButton";
-import { isAuthenticated, logout } from "../utils/auth";
+import { isAuthenticated } from "../utils/auth";
 import { authApi } from "../utils/apis";
 
 const menuItems = [
@@ -38,9 +37,7 @@ const menuItems = [
 
 export default function Header() {
   const pathname = usePathname();
-  const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,26 +50,9 @@ export default function Header() {
     setIsUserAuthenticated(isAuthenticated());
   }, []);
 
-  // Handle wallet connection/disconnection
-  const handleConnectWallet = async () => {
-    try {
-      await connect({ connector: injected() });
-    } catch (error) {
-      console.error("Failed to connect wallet:", error);
-      message.error("Failed to connect wallet");
-    }
-  };
-
-  const handleDisconnectWallet = () => {
-    disconnect();
-    // Also logout from backend
-    logout();
-    setIsUserAuthenticated(false);
-  };
-
   // Handle wallet authentication
   const handleAuthenticate = async () => {
-    if (!address || !isConnected) {
+    if (!address) {
       message.error("Please connect your wallet first");
       return;
     }
@@ -262,16 +242,10 @@ export default function Header() {
       );
     }
 
-    if (isConnected && address) {
+    if (address) {
       return (
         <div className="hidden md:flex items-center gap-2">
-          <WalletButton
-            address={address}
-            isConnected={isConnected}
-            onConnect={handleConnectWallet}
-            onDisconnect={handleDisconnectWallet}
-            className="hidden md:flex"
-          />
+          <WalletButton className="hidden md:flex" />
 
           {!isUserAuthenticated && (
             <motion.button
@@ -355,15 +329,7 @@ export default function Header() {
       );
     }
 
-    return (
-      <WalletButton
-        address={address}
-        isConnected={isConnected}
-        onConnect={handleConnectWallet}
-        onDisconnect={handleDisconnectWallet}
-        className="hidden md:flex"
-      />
-    );
+    return <WalletButton className="hidden md:flex" />;
   };
 
   return (
