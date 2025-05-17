@@ -1,20 +1,21 @@
-import { useContract } from "./common/useContract";
-import { type InvoiceData } from "./common/contractABI";
+import { useCB, useContract } from "./common/useContract";
+import { BaseContractProps, type InvoiceData } from "./common/contractABI";
 import {
   useWriteContract,
   useReadContract,
   useWaitForTransactionReceipt,
+  useChainId,
+  useConfig,
 } from "wagmi";
 import { useEffect, useRef } from "react";
 
 export const useInvoice = () => {
   const { contractAddress, contractAbi, address } = useContract();
+  const chainId = useChainId();
+  const config = useConfig();
+  const currentChain = config.chains?.find((chain) => chain.id === chainId);
 
-  const useBatchCreateInvoices = ({
-    onSuccess,
-  }: {
-    onSuccess: <T>(data: T) => void;
-  }) => {
+  const useBatchCreateInvoices = ({ onSuccess }: BaseContractProps) => {
     const {
       writeContract,
       error: writeContractError,
@@ -37,12 +38,6 @@ export const useInvoice = () => {
       }
 
       try {
-        const provider = await window.ethereum;
-        const currentChainId = await provider.request({
-          method: "eth_chainId",
-        });
-
-        // Transform invoices to match contract format
         const transformedInvoices = invoices.map((invoice) => {
           const res = {
             invoiceNumber: invoice.invoice_number,
@@ -66,13 +61,11 @@ export const useInvoice = () => {
           address: contractAddress as `0x${string}`,
           functionName: "batchCreateInvoices",
           args: [transformedInvoices],
-          chain: undefined,
+          chain: currentChain,
           account: address as `0x${string}`,
         };
 
-        const result = await writeContract(params);
-
-        return result;
+        writeContract(params);
       } catch (err: unknown) {
         throw err;
       }
@@ -93,17 +86,36 @@ export const useInvoice = () => {
     };
   };
 
+  /** ✅ 批量创建票据 */
   const useCreateTokenBatch = ({
     onSuccess,
-  }: {
-    onSuccess: <T>(data: T) => void;
-  }) => {
-    const { writeContract, error, data: hash } = useWriteContract();
-    const { data, isSuccess } = useWaitForTransactionReceipt({
+    onError,
+    onLoading,
+  }: BaseContractProps) => {
+    const {
+      writeContract,
+      error,
+      data: hash,
+      isPending: isWritePending,
+    } = useWriteContract();
+    const {
+      data,
+      isSuccess,
+      isPending: isReceiptPending,
+    } = useWaitForTransactionReceipt({
       hash: hash,
     });
 
-    const onSuccessRef = useRef(onSuccess);
+    useCB({
+      isSuccess,
+      isLoading: isWritePending || isReceiptPending,
+      hash,
+      data,
+      error,
+      onSuccess,
+      onError,
+      onLoading,
+    });
 
     const createTokenBatch = async (
       batchId: string,
@@ -132,7 +144,7 @@ export const useInvoice = () => {
             BigInt(interestRate),
           ],
           account: address as `0x${string}`,
-          chain: undefined,
+          chain: currentChain,
         };
 
         await writeContract(params);
@@ -141,12 +153,6 @@ export const useInvoice = () => {
         throw err;
       }
     };
-
-    useEffect(() => {
-      if (isSuccess && hash && onSuccessRef.current) {
-        onSuccessRef.current({ data, hash, status: "success" });
-      }
-    }, [isSuccess, hash, data]);
 
     return {
       createTokenBatch,
@@ -157,7 +163,7 @@ export const useInvoice = () => {
     };
   };
 
-  // Confirm token batch issue hook
+  /** ✅ （）确认票据批次发行 */
   const useConfirmTokenBatchIssue = () => {
     const {
       writeContract,
@@ -185,7 +191,7 @@ export const useInvoice = () => {
           functionName: "confirmTokenBatchIssue",
           args: [batchId],
           account: address as `0x${string}`,
-          chain: undefined,
+          chain: currentChain,
         };
 
         console.log("Confirming token batch issue with params:", {

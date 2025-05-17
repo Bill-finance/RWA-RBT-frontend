@@ -8,7 +8,9 @@ import { Chain } from "viem";
 
 import "@rainbow-me/rainbowkit/styles.css";
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-
+import ThemeProvider from "./components/layout/ThemeProvider";
+import { MessageProviderWithHandler } from "./components/ui/Message";
+import { App as AntdApp } from "antd";
 const queryClient = new QueryClient();
 
 // Define the PHASE testnet chain
@@ -55,7 +57,7 @@ const mantleSepoliaTestNet: Chain = {
 };
 
 const config = createConfig({
-  chains: [mainnet, sepolia, phaseTestnet],
+  chains: [mainnet, sepolia, phaseTestnet, mantleSepoliaTestNet],
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),
@@ -68,10 +70,18 @@ const config = createConfig({
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>{children}</RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ThemeProvider>
+      <AntdApp>
+        <MessageProviderWithHandler>
+          <WagmiProvider config={config}>
+            <QueryClientProvider client={queryClient}>
+              <RainbowKitProvider initialChain={phaseTestnet.id}>
+                {children}
+              </RainbowKitProvider>
+            </QueryClientProvider>
+          </WagmiProvider>
+        </MessageProviderWithHandler>
+      </AntdApp>
+    </ThemeProvider>
   );
 }

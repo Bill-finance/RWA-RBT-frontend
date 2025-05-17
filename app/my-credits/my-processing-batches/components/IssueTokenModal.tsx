@@ -14,7 +14,7 @@ import {
   tokenApi,
   invoiceBatchApi,
 } from "@/app/utils/apis";
-import { message } from "@/app/components/Message";
+import { message } from "@/app/components/ui/Message";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
 import { useToken } from "@/app/utils/contracts";

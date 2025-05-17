@@ -1,5 +1,11 @@
 import { type Abi } from "viem";
 
+export interface BaseContractProps {
+  onSuccess?: <T>(data: T) => void;
+  onError?: (error: Error) => void;
+  onLoading?: (loading: boolean) => void;
+}
+
 export interface InvoiceData {
   invoice_number: string;
   payee: `0x${string}`;

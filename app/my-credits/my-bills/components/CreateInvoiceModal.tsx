@@ -61,13 +61,12 @@ function CreateInvoiceModal({
     }
   };
 
-  // 每次打开时重置状态
   useEffect(() => {
     if (open) {
       setError(null);
       form.resetFields();
       form.setFieldsValue({
-        payer: address,
+        payee: address,
       });
     }
   }, [open, form, address]);
@@ -95,18 +94,19 @@ function CreateInvoiceModal({
     >
       <Form form={form} layout="vertical" initialValues={{ currency: "USD" }}>
         <Form.Item
-          name="payer"
-          label="Payer Address"
-          rules={[{ required: true, message: "Please enter payer address" }]}
-        >
-          <Input placeholder="Enter payer wallet address" />
-        </Form.Item>
-        <Form.Item
           name="payee"
           label="Payee Address"
           rules={[{ required: true, message: "Please enter payee address" }]}
         >
           <Input placeholder="Enter payee wallet address" />
+        </Form.Item>
+
+        <Form.Item
+          name="payer"
+          label="Payer Address"
+          rules={[{ required: true, message: "Please enter payer address" }]}
+        >
+          <Input placeholder="Enter payer wallet address" />
         </Form.Item>
 
         <Form.Item

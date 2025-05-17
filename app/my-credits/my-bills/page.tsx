@@ -5,7 +5,7 @@ import { useAccount } from "wagmi";
 import { Button, Table, Input, Typography, Space, Card } from "antd";
 import { SearchOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
 import { invoiceApi, Invoice } from "@/app/utils/apis";
-import { message } from "@/app/components/Message";
+import { message } from "@/app/components/ui/Message";
 import CreateInvoiceModal from "./components/CreateInvoiceModal";
 import CreateTokenBatchModal from "./components/CreateTokenBatchModal";
 import { ColumnsType } from "antd/es/table";
@@ -55,7 +55,7 @@ export default function MyBillsPage() {
       const invoice = res.data[0];
 
       // 2. 准备合约数据
-      const invoiceData = {
+      const invoiceParams = {
         invoice_number: invoice.invoice_number,
         payee: invoice.payee as `0x${string}`,
         payer: invoice.payer as `0x${string}`,
@@ -68,10 +68,11 @@ export default function MyBillsPage() {
         is_cleared: invoice.is_cleared,
         is_valid: invoice.is_valid,
       };
+      console.log("检查下参数", invoiceParams);
 
       // 3. 调用合约的 batchCreateInvoices 函数
       try {
-        await batchCreateInvoices([invoiceData]);
+        await batchCreateInvoices([invoiceParams]);
       } catch (error: unknown) {
         // 检查是否是用户取消
         if (error !== null) {

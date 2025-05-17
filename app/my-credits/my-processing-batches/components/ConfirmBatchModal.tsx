@@ -1,6 +1,6 @@
 import { Button, Modal, Typography, Tag, Descriptions } from "antd";
 import { InvoiceBatch, tokenApi } from "@/app/utils/apis";
-import { message } from "@/app/components/Message";
+import { message } from "@/app/components/ui/Message";
 import { useState, useEffect, useCallback } from "react";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
 import { Form } from "antd";

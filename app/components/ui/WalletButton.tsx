@@ -40,13 +40,10 @@ export default function WalletButton({
                 className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-700"
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                onClick={() => {
-                  openAccountModal();
-                }}
               >
-                {/* 脉动的点 */}
+                {/* Pulsing dot */}
                 <motion.div
-                  className="w-2 h-2 rounded-full bg-green-500"
+                  className="w-2 h-2 rounded-full bg-green-500 cursor-pointer"
                   animate={{
                     boxShadow: [
                       "0 0 0 0 rgba(74, 222, 128, 0)",
@@ -59,21 +56,34 @@ export default function WalletButton({
                     repeat: Infinity,
                     repeatType: "loop",
                   }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    openAccountModal();
+                  }}
                 />
 
-                {/* 地址 */}
-                <span className="text-zinc-300 text-sm font-medium">
+                {/* Address */}
+                <span
+                  className="text-zinc-300 text-sm font-medium cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    openAccountModal();
+                  }}
+                >
                   {truncateAddress(account.address)}
                 </span>
 
-                {/* 分隔符 */}
+                {/* Separator */}
                 <span className="text-zinc-500 mx-1">|</span>
 
-                {/* 网络信息 */}
+                {/* Network info */}
                 <div
                   className="flex items-center gap-1.5 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     openChainModal();
                   }}
                 >
@@ -81,8 +91,8 @@ export default function WalletButton({
                     className="w-2 h-2 rounded-full"
                     style={{
                       backgroundColor: chain.unsupported
-                        ? "red"
-                        : "rgb(239, 68, 68)",
+                        ? "#ef4444"
+                        : "#22c55e",
                     }}
                   />
                   {chain.hasIcon && (
@@ -112,7 +122,7 @@ export default function WalletButton({
                   </span>
                 </div>
 
-                {/* 按钮内微妙的光效 */}
+                {/* Subtle light effect inside button */}
                 <motion.div
                   className="absolute inset-0 opacity-30 rounded-full"
                   style={{
@@ -136,15 +146,13 @@ export default function WalletButton({
                   }}
                 />
               </motion.div>
-
-              {/* 验证状态按钮可以在这里添加，如果需要 */}
             </div>
           );
         }
 
         return (
           <motion.button
-            className={`relative overflow-hidden rounded-full font-medium flex items-center gap-2 px-4 py-2 min-w-[160px] ${className}`}
+            className={`relative overflow-hidden rounded-full font-medium flex items-center gap-2 px-4 py-2 ${className}`}
             style={{
               background: "linear-gradient(45deg, #1a1a1a, #333333)",
               boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
@@ -153,7 +161,7 @@ export default function WalletButton({
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
-            {/* 背景渐变流光效果 */}
+            {/* Background gradient flow effect */}
             <motion.div
               className="absolute inset-0 opacity-50"
               style={{
@@ -177,7 +185,7 @@ export default function WalletButton({
               }}
             />
 
-            {/* 边缘发光效果 */}
+            {/* Edge glow effect */}
             <motion.div
               className="absolute inset-0 rounded-full opacity-0"
               animate={{

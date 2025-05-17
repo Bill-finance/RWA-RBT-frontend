@@ -1,7 +1,7 @@
-import GridBackground from "./components/GridBackground";
-import Hero from "./components/Hero";
-import Features from "./components/Features";
-import Partners from "./components/Partners";
+import GridBackground from "./components/ui/GridBackground";
+import Hero from "./components/home/Hero";
+import Features from "./components/home/Features";
+import Partners from "./components/home/Partners";
 
 export default function Home() {
   return (

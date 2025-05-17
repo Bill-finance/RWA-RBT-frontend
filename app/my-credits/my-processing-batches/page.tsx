@@ -14,7 +14,7 @@ import {
 } from "antd";
 import { SearchOutlined, EyeOutlined, CheckOutlined } from "@ant-design/icons";
 import { InvoiceBatch, Invoice, invoiceBatchApi } from "@/app/utils/apis";
-import { message } from "@/app/components/Message";
+import { message } from "@/app/components/ui/Message";
 import BatchDetailModal from "./components/BatchDetailModal";
 import ConfirmBatchModal from "./components/ConfirmBatchModal";
 import HashText from "@/app/components/ui/HashText";

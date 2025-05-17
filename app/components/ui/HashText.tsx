@@ -1,7 +1,7 @@
 import { Tooltip } from "antd";
 import { useAccount } from "wagmi";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { message } from "../Message";
+import { message } from "./Message";
 
 export interface HashTextProps {
   text: string;

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ShoppingCartOutlined, SyncOutlined } from "@ant-design/icons";
 import { tokenApi, TokenMarketData } from "../utils/apis/token";
 import TokenPurchaseModal from "./components/TokenPurchaseModal";
-import { message } from "../components/Message";
+import { message } from "../components/ui/Message";
 import HashText from "../components/ui/HashText";
 import { useContract } from "@/app/utils/contracts/common/useContract";
 import { invoiceBatchApi } from "@/app/utils/apis/invoiceBatch";

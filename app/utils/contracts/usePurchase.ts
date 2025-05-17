@@ -1,9 +1,19 @@
 import { useEffect } from "react";
 import { useContract } from "./common/useContract";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useChainId,
+  useConfig,
+} from "wagmi";
 
 export const usePurchase = () => {
   const { contractAddress, contractAbi, address } = useContract();
+  const chainId = useChainId();
+  const config = useConfig();
+
+  // Get the current chain object from config
+  const currentChain = config.chains?.find((chain) => chain.id === chainId);
 
   const {
     writeContract,
@@ -36,7 +46,7 @@ export const usePurchase = () => {
         address: contractAddress as `0x${string}`,
         functionName: "purchaseShares",
         args: [tokenBatch, amount],
-        chain: undefined,
+        chain: currentChain,
         account: address as `0x${string}`,
       });
     } catch (err) {

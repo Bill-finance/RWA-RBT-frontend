@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { ConfigProvider } from "antd";
-import { darkTheme, setGlobalStyles } from "../styles/theme";
+import { darkTheme, setGlobalStyles } from "../../styles/theme";
 
 interface ThemeProviderProps {
   children: React.ReactNode;
