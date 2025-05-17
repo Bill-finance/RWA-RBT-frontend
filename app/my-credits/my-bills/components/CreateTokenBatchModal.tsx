@@ -40,10 +40,13 @@ function CreateTokenBatchModal({
   const { useCreateTokenBatch, useConfirmTokenBatchIssue } = useInvoice();
   const {
     createTokenBatch: executeCreateTokenBatch,
-    isPending: isCreateBatchPending,
     isSuccess: isCreateBatchSuccess,
     error: createBatchError,
-  } = useCreateTokenBatch();
+  } = useCreateTokenBatch({
+    onSuccess: () => {
+      // TODO:
+    },
+  });
 
   const {
     isPending: isConfirmPending,
@@ -208,33 +211,17 @@ function CreateTokenBatchModal({
       setCreationComplete(true);
       message.success("Token batch created successfully!");
 
-      // Proceed to confirmation step
-      // const confirmBatch = async () => {
-      //   try {
-      //     message.info("Confirming token batch issuance...");
-      //     await confirmTokenBatchIssue(currentBatchId);
-      //   } catch (err) {
-      //     console.error("Failed to initiate token batch confirmation:", err);
-      //     message.error("Failed to confirm token batch issuance");
-      //   }
-      // };
-
-      // confirmBatch();
-
-      // Skip confirmation and directly update backend
       if (currentBatchId) {
         updateBackend(currentBatchId);
       }
     }
   }, [
     currentBatchId,
-    isCreateBatchPending,
     isCreateBatchSuccess,
     createBatchError,
     creationComplete,
     processingIds,
     selectedInvoices,
-    // confirmTokenBatchIssue,
     setProcessingIds,
     updateBackend,
   ]);

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useWriteContract, useAccount, useChainId, useConfig } from "wagmi";
-import { CONTRACT_ABI } from "./contractABI";
+import { CONTRACT_ABI } from "./common/contractABI";
 
 export const useToken = () => {
   // Hook for creating a token

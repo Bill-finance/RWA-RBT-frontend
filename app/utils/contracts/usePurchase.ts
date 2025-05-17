@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useContract } from "./useContract";
+import { useContract } from "./common/useContract";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 
 export const usePurchase = () => {

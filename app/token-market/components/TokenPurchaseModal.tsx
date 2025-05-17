@@ -13,7 +13,7 @@ import { useState, useEffect } from "react";
 import { TokenMarketData } from "../../utils/apis/token";
 import { useTokenPurchase } from "@/app/utils/contracts/useTokenPurchase";
 import { message } from "@/app/components/Message";
-import { useContract } from "@/app/utils/contracts/useContract";
+import { useContract } from "@/app/utils/contracts/common/useContract";
 import { parseUnits } from "viem";
 import { invoiceBatchApi } from "@/app/utils/apis/invoiceBatch";
 

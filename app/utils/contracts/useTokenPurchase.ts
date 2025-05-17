@@ -7,7 +7,7 @@ import {
   useConfig,
 } from "wagmi";
 import { parseUnits } from "viem";
-import { useContract } from "./useContract";
+import { useContract } from "./common/useContract";
 
 // ERC20 ABI for token operations
 const ERC20_ABI = [

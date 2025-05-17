@@ -7,7 +7,7 @@ import { tokenApi, TokenMarketData } from "../utils/apis/token";
 import TokenPurchaseModal from "./components/TokenPurchaseModal";
 import { message } from "../components/Message";
 import HashText from "../components/ui/HashText";
-import { useContract } from "@/app/utils/contracts/useContract";
+import { useContract } from "@/app/utils/contracts/common/useContract";
 import { invoiceBatchApi } from "@/app/utils/apis/invoiceBatch";
 
 const { Title } = Typography;

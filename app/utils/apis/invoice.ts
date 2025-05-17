@@ -29,20 +29,6 @@ export interface Invoice {
   updated_at: string;
 }
 
-// export interface InvoiceBatch {
-//   accepted_currency: string;
-//   created_at: string;
-//   creditor_name: string;
-//   debtor_name: string;
-//   id: string;
-//   invoice_count: number;
-//   status: string;
-//   token_batch_id: string;
-//   total_amount: number;
-// }
-
-// 票据状态：待上链->已上链->在售
-
 export const invoiceApi = {
   // 创建
   create: (data: CreateInvoiceRequest) => {
