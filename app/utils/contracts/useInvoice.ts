@@ -8,6 +8,15 @@ import {
   useConfig,
 } from "wagmi";
 
+interface CreateTokenBatchProps {
+  batchId: string;
+  invoiceNumbers: string[];
+  stableToken: `0x${string}`;
+  minTerm: number;
+  maxTerm: number;
+  interestRate: number;
+}
+
 export const useInvoice = () => {
   const { contractAddress, contractAbi, address } = useContract();
   const chainId = useChainId();
@@ -102,18 +111,15 @@ export const useInvoice = () => {
       hash,
     });
 
-    const createTokenBatch = async (
-      batchId: string,
-      invoiceNumbers: string[],
-      stableToken: string,
-      minTerm: number,
-      maxTerm: number,
-      interestRate: number
-    ) => {
-      if (!contractAddress) {
-        console.error("Contract address is not defined");
-        return;
-      }
+    const createTokenBatch = async (props: CreateTokenBatchProps) => {
+      const {
+        batchId,
+        invoiceNumbers,
+        stableToken,
+        minTerm,
+        maxTerm,
+        interestRate,
+      } = props;
 
       try {
         const params = {
@@ -131,6 +137,8 @@ export const useInvoice = () => {
           account: address as `0x${string}`,
           chain: currentChain,
         };
+
+        console.log("createTokenBatch params", params);
 
         await writeContract(params);
       } catch (err) {
@@ -162,19 +170,18 @@ export const useInvoice = () => {
       writeContract,
       isPending: isWritePending,
       isSuccess,
-      error,
+      error: writeContractError,
       data: hash,
     } = useWriteContract();
-    const { data, isLoading: isReceiptLoading } = useWaitForTransactionReceipt({
+    const {
+      data,
+      isLoading: isReceiptLoading,
+      error: waitForTransactionReceiptError,
+    } = useWaitForTransactionReceipt({
       hash,
     });
 
     const confirmTokenBatchIssue = async (batchId: string) => {
-      if (!contractAddress) {
-        console.error("Contract address is not defined");
-        return;
-      }
-
       const params = {
         abi: contractAbi,
         address: contractAddress as `0x${string}`,
@@ -183,9 +190,14 @@ export const useInvoice = () => {
         account: address as `0x${string}`,
         chain: currentChain,
       };
+      console.log("confirmTokenBatchIssue params", params);
 
       await writeContract(params);
     };
+
+    const error = writeContractError || waitForTransactionReceiptError;
+
+    console.log("confirmTokenBatchIssue error", error);
 
     useCB({
       isSuccess,

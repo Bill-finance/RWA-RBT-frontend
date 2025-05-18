@@ -22,8 +22,7 @@ export default function MyBillsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTokenBatchModal, setShowTokenBatchModal] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [selectedInvoices, setSelectedInvoices] = useState<Invoice[]>([]);
   const [processingIds, setProcessingIds] = useState<string[]>([]);
   const processingIdsRef = useRef<string[]>([]);
   const { address } = useAccount();
@@ -60,9 +59,9 @@ export default function MyBillsPage() {
     setShowTokenBatchModal(true);
   };
 
-  const handleVerify = async (invoiceNumber: string, id: string) => {
-    // 立即设置 loading 状态，防止重复点击
-    setProcessingIds([...processingIds, id]);
+  const handleVerify = async (invoiceNumber: string, invoiceId: string) => {
+    setProcessingIds([...processingIds, invoiceId]);
+    setSelectedInvoices(selectedInvoices.filter((inv) => inv.id !== invoiceId));
 
     try {
       // 1. 获取票据详情
@@ -70,7 +69,6 @@ export default function MyBillsPage() {
       if (!res || res.code !== 200) {
         throw new Error("Invoice not found");
       }
-      console.log("invoiceApi detail res", res);
       const invoice = res.data[0];
 
       // 2. 准备合约数据
@@ -88,6 +86,8 @@ export default function MyBillsPage() {
         is_valid: invoice.is_valid,
       };
 
+      console.log("invoiceParams", invoiceParams);
+
       // 3. 调用合约的 batchCreateInvoices 函数
       await batchCreateInvoices([invoiceParams]);
     } catch (error) {
@@ -100,7 +100,6 @@ export default function MyBillsPage() {
     async (currentProcessingId: string) => {
       try {
         const response = await invoiceApi.verify(currentProcessingId);
-        console.log("updateToBackend response", response);
         if (response.code === 0 || response.code === 200) {
           await loadInvoices({ setIsLoading, setInvoices });
         } else {
@@ -116,19 +115,18 @@ export default function MyBillsPage() {
 
   const handleViewDetail = async (invoice: Invoice) => {
     try {
-      // Get invoice details with blockchain status
       const response = await invoiceApi.detail(invoice.invoice_number);
       if (response.code === 200 && response.data[0]) {
-        setSelectedInvoice({ ...invoice, ...response.data[0] });
+        setSelectedInvoices([{ ...invoice, ...response.data[0] }]);
       } else {
-        setSelectedInvoice(invoice);
+        setSelectedInvoices([invoice]);
         message.warning("Could not fetch latest blockchain status");
       }
       setShowDetailModal(true);
     } catch (error) {
       console.error(error);
       message.error("Failed to load invoice details");
-      setSelectedInvoice(invoice);
+      setSelectedInvoices([invoice]);
       setShowDetailModal(true);
     }
     // finally {
@@ -136,16 +134,9 @@ export default function MyBillsPage() {
     // }
   };
 
-  const filteredInvoices = invoices.filter(
-    (invoice) =>
-      invoice.id.toLowerCase().includes(searchText.toLowerCase()) ||
-      invoice.invoice_number.toLowerCase().includes(searchText.toLowerCase()) ||
-      invoice.status.toLowerCase().includes(searchText.toLowerCase())
-  );
-
   const handleCheck = (e, record) => {
     if (e.target.checked) {
-      setSelectedInvoices([...selectedInvoices, record.id]);
+      setSelectedInvoices([...selectedInvoices, record]);
     } else {
       setSelectedInvoices(selectedInvoices.filter((id) => id !== record.id));
     }
@@ -157,16 +148,6 @@ export default function MyBillsPage() {
     }
   }, [isConnected]);
 
-  useEffect(() => {
-    if (selectedInvoices.length > 0 && processingIds.length > 0) {
-      const timer = setTimeout(() => {
-        console.log(`Monitoring invoices: ${selectedInvoices.join(", ")}`);
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [selectedInvoices, processingIds]);
-
   const columns = getTableColumns({
     processingIds,
     address,
@@ -175,6 +156,13 @@ export default function MyBillsPage() {
     handleViewDetail,
     handleVerify,
   });
+
+  const filteredInvoices = invoices.filter(
+    (invoice) =>
+      invoice.id.toLowerCase().includes(searchText.toLowerCase()) ||
+      invoice.invoice_number.toLowerCase().includes(searchText.toLowerCase()) ||
+      invoice.status.toLowerCase().includes(searchText.toLowerCase())
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -196,12 +184,12 @@ export default function MyBillsPage() {
             <Button
               type="primary"
               onClick={handleIssueInvoices}
-              loading={selectedInvoices.some((id) =>
-                processingIds.includes(id)
+              loading={selectedInvoices.some((inv) =>
+                processingIds.includes(inv.id)
               )}
               disabled={
                 selectedInvoices.length === 0 ||
-                selectedInvoices.some((id) => processingIds.includes(id))
+                selectedInvoices.some((inv) => processingIds.includes(inv.id))
               }
               icon={<SendOutlined rotate={-45} />}
             >
@@ -232,9 +220,9 @@ export default function MyBillsPage() {
         open={showDetailModal}
         onCancel={() => {
           setShowDetailModal(false);
-          setSelectedInvoice(null);
+          setSelectedInvoices([]);
         }}
-        selectedInvoice={selectedInvoice}
+        selectedInvoices={selectedInvoices}
       />
 
       {/* 创建票据 */}
@@ -246,6 +234,7 @@ export default function MyBillsPage() {
         onSuccess={() => {
           setShowCreateModal(false);
           loadInvoices({ setIsLoading, setInvoices });
+          setProcessingIds([]);
         }}
       />
 
@@ -256,11 +245,10 @@ export default function MyBillsPage() {
           setShowTokenBatchModal(false);
         }}
         selectedInvoices={selectedInvoices}
-        invoiceNumbers={invoices
-          .filter((inv) => selectedInvoices.includes(inv.id))
-          .map((inv) => inv.invoice_number)}
         onSuccess={() => {
+          setShowTokenBatchModal(false);
           loadInvoices({ setIsLoading, setInvoices });
+          setProcessingIds([]);
         }}
         setProcessingIds={setProcessingIds}
         processingIds={processingIds}

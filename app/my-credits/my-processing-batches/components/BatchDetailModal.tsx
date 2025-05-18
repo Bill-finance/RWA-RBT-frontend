@@ -14,6 +14,8 @@ interface BatchDetailModalProps {
 function BatchDetailModal(params: BatchDetailModalProps) {
   const { open, onCancel, selectedBatch, selectedBatchInvoices } = params;
 
+  console.log("selectedBatchInvoices", selectedBatchInvoices);
+
   return (
     <Modal
       destroyOnClose
@@ -88,6 +90,11 @@ function BatchDetailModal(params: BatchDetailModalProps) {
           <Table
             columns={[
               {
+                title: "Invoice Id",
+                dataIndex: "id",
+                key: "id",
+              },
+              {
                 title: "Invoice Number",
                 dataIndex: "invoice_number",
                 key: "invoice_number",
@@ -99,18 +106,18 @@ function BatchDetailModal(params: BatchDetailModalProps) {
                 render: (amount: number, record: Invoice) =>
                   `${record.currency} ${Number(amount).toLocaleString()}`,
               },
-              {
-                title: "Status",
-                dataIndex: "status",
-                key: "status",
-                render: (text: string) => {
-                  let color = "default";
-                  if (text === "PENDING") color = "orange";
-                  if (text === "VERIFIED") color = "blue";
-                  if (text === "ISSUED") color = "green";
-                  return <Tag color={color}>{text}</Tag>;
-                },
-              },
+              // {
+              //   title: "Status",
+              //   dataIndex: "status",
+              //   key: "status",
+              //   render: (text: string) => {
+              //     let color = "default";
+              //     if (text === "PENDING") color = "orange";
+              //     if (text === "VERIFIED") color = "blue";
+              //     if (text === "ISSUED") color = "green";
+              //     return <Tag color={color}>{text}</Tag>;
+              //   },
+              // },
               {
                 title: "Due Date",
                 dataIndex: "due_date",

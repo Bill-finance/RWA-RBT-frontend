@@ -34,13 +34,13 @@ function CreateInvoiceModal({
       setSubmitting(true);
       setError(null);
 
-      const requestData: CreateInvoiceRequest = {
+      const params: CreateInvoiceRequest = {
         ...values,
         amount: Number(values.amount),
         due_date: Math.floor(values.due_date.valueOf() / 1000),
       };
 
-      const response = await invoiceApi.create(requestData);
+      const response = await invoiceApi.create(params);
 
       if (response.code === 0 || response.code === 200) {
         form.resetFields();

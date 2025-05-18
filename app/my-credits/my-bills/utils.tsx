@@ -39,7 +39,7 @@ export const getTableColumns = (props) => {
             }}
             type="checkbox"
             disabled={isDisabled}
-            checked={selectedInvoices.includes(record.id)}
+            checked={selectedInvoices.some((inv) => inv.id === record.id)}
             onChange={(e) => handleCheck(e, record)}
           />
         );

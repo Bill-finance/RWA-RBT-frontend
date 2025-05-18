@@ -8,8 +8,7 @@ import { getAddress0 } from "@/app/utils/format";
 interface CreateTokenBatchModalProps {
   open: boolean;
   onCancel: () => void;
-  selectedInvoices: string[];
-  invoiceNumbers: string[];
+  selectedInvoices: Invoice[];
   onSuccess: () => void;
   setProcessingIds: (ids: string[]) => void;
   processingIds: string[];
@@ -22,56 +21,62 @@ export interface TokenBatchFormValues {
   interestRate: number;
 }
 
-function CreateTokenBatchModal({
-  open,
-  onCancel,
-  selectedInvoices,
-  invoiceNumbers,
-  setProcessingIds,
-  processingIds,
-}: CreateTokenBatchModalProps) {
+function CreateTokenBatchModal(props: CreateTokenBatchModalProps) {
+  const {
+    open,
+    onCancel,
+    onSuccess,
+    setProcessingIds,
+    processingIds,
+    selectedInvoices,
+  } = props;
+  const selectedInvoiceIds = selectedInvoices.map((inv) => inv.id);
+  const invoiceNumbers = selectedInvoices.map((inv) => inv.invoice_number);
+  console.log("invoiceNumbers", invoiceNumbers);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [batchId, setBatchId] = useState<string | null>(null);
 
+  // // TODO: 这里有闭包问题，先这么解决，后面重构
+  // const latestValuesRef = useRef({
+  //   invoiceNumbers: invoiceNumbers,
+  //   batchId: null as string | null,
+  //   selectedInvoiceIds: selectedInvoiceIds,
+  // });
+
+  // useEffect(() => {
+  //   latestValuesRef.current.invoiceNumbers = invoiceNumbers;
+  //   latestValuesRef.current.selectedInvoiceIds = selectedInvoiceIds;
+  // }, [invoiceNumbers, selectedInvoiceIds]);
+
+  // useEffect(() => {
+  //   latestValuesRef.current.batchId = batchId;
+  // }, [batchId]);
+
   const { useCreateTokenBatch } = useInvoice();
   const { createTokenBatch } = useCreateTokenBatch({
     onSuccess: () => {
-      updateBackend();
-      setSubmitting(false);
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
       message.success("Token batch created successfully");
+      updateBackend();
+      onSuccess();
+      setSubmitting(false);
     },
     onError: (error) => {
       console.error(error);
       setSubmitting(false);
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
     },
   });
 
   const updateBackend = useCallback(async () => {
     try {
-      const detailPromises = [];
-      for (let i = 0; i < invoiceNumbers.length; i++) {
-        try {
-          const detailResponse = invoiceApi.detail(invoiceNumbers[i]);
-          detailPromises.push(detailResponse);
-        } catch (err) {
-          console.error(`Error checking invoice ${invoiceNumbers[i]}:`, err);
-          break;
-        }
-      }
+      console.log("updateBackend with invoiceNumbers:", invoiceNumbers);
 
-      const detailResponses: {
-        code: number;
-        msg: string;
-        data: Invoice[];
-      }[] = await Promise.all(detailPromises);
+      const detailPromises = invoiceNumbers.map((invoiceNumber) =>
+        invoiceApi.detail(invoiceNumber)
+      );
+      const detailResponses = await Promise.all(detailPromises);
 
+      console.log("detailResponses", invoiceNumbers, detailResponses);
       if (
         detailResponses.some((response) => response.code !== 200) ||
         detailResponses.some((response) => response.data.length === 0)
@@ -88,14 +93,15 @@ function CreateTokenBatchModal({
       if (issueResponse.code !== 200) {
         console.error(`Failed to issue invoice`);
       }
+      // TODO: err No invoices selected for issuance
       console.log("issueResponse!!", issueResponse);
     } catch (error) {
       console.error("Error updating backend:", error);
       message.error("Failed to update backend status");
     }
-  }, [batchId, invoiceNumbers]);
+  }, []); // Remove dependencies as we're using ref values now
 
-  const handleCancel = () => {
+  const handleCancelModal = () => {
     if (submitting) {
       return; // Prevent closing during submission
     }
@@ -106,21 +112,23 @@ function CreateTokenBatchModal({
   const handleSubmit = async () => {
     const values = await form.validateFields();
     setSubmitting(true);
-    setProcessingIds([...processingIds, ...selectedInvoices]);
+    setProcessingIds([...processingIds, ...selectedInvoiceIds]);
     // 利率的表示形式：(5% -> 500)
     const formattedValues: TokenBatchFormValues = {
       ...values,
       interestRate: Math.floor(values.interestRate * 100),
     };
-
-    await createTokenBatch(
+    const params = {
       batchId,
       invoiceNumbers,
-      formattedValues.stableTokenAddress,
-      formattedValues.minTerm,
-      formattedValues.maxTerm,
-      formattedValues.interestRate
-    );
+      stableToken: formattedValues.stableTokenAddress as `0x${string}`,
+      minTerm: formattedValues.minTerm,
+      maxTerm: formattedValues.maxTerm,
+      interestRate: formattedValues.interestRate,
+    };
+    console.log("params????", params);
+
+    await createTokenBatch(params);
   };
 
   useEffect(() => {
@@ -149,12 +157,9 @@ function CreateTokenBatchModal({
     <Modal
       title="Create Token Batch"
       open={open}
-      onCancel={handleCancel}
+      onCancel={handleCancelModal}
       destroyOnClose
       footer={[
-        <Button key="cancel" onClick={handleCancel} disabled={submitting}>
-          Cancel
-        </Button>,
         <Button
           key="submit"
           type="primary"

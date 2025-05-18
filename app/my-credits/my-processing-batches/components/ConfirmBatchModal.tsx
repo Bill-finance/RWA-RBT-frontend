@@ -1,5 +1,5 @@
 import { Button, Modal, Typography, Tag, Descriptions } from "antd";
-import { InvoiceBatch, tokenApi } from "@/app/utils/apis";
+import { Invoice, InvoiceBatch, tokenApi } from "@/app/utils/apis";
 import { message } from "@/app/components/ui/Message";
 import { useState, useCallback } from "react";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
@@ -12,21 +12,18 @@ interface ConfirmBatchModalProps {
   onCancel: () => void;
   onSuccess: () => void;
   selectedBatch: InvoiceBatch | null;
+  selectedBatchInvoices: Invoice[];
 }
 
-function ConfirmBatchModal({
-  open,
-  onCancel,
-  onSuccess,
-  selectedBatch,
-}: ConfirmBatchModalProps) {
+function ConfirmBatchModal(props: ConfirmBatchModalProps) {
+  const { open, onCancel, onSuccess, selectedBatch } = props;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { useConfirmTokenBatchIssue } = useInvoice();
   const { confirmTokenBatchIssue } = useConfirmTokenBatchIssue({
     onSuccess: () => {
+      updateBackend();
       onSuccess();
       setIsSubmitting(false);
-      updateBackend();
     },
     onError: (error) => {
       console.error(error);
@@ -39,7 +36,7 @@ function ConfirmBatchModal({
 
     // TODO: 目前有些 mock 数据，需要让后端更新下字段
     const params = {
-      batch_id: selectedBatch.id,
+      batch_id: selectedBatch.id, // TODO: 这个有误解，其实应该是 invoice id
       // TODO: 从后端获取，创建票据批次的时候（issueTokenBatch），其实有输入这个，但是后端貌似没存储
       interest_rate_apy: 5, // 5%
       // TODO: 同上
@@ -49,6 +46,7 @@ function ConfirmBatchModal({
       // TODO: 同上
       blockchain_token_id: getAddress0(),
     };
+    console.log("updateBackend params", selectedBatch, params);
 
     const response = await tokenApi.createToken(params);
     if (response.code !== 200) {
@@ -56,11 +54,17 @@ function ConfirmBatchModal({
     }
   }, [selectedBatch]);
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     setIsSubmitting(true);
     message.loading("Confirming batch on blockchain...");
-    await confirmTokenBatchIssue(selectedBatch.id);
-  };
+
+    if (!selectedBatch?.token_batch_id) {
+      message.error("Token batch ID is not found");
+      setIsSubmitting(false);
+      return;
+    }
+    await confirmTokenBatchIssue(selectedBatch.token_batch_id);
+  }, [selectedBatch, confirmTokenBatchIssue]);
 
   return (
     <Modal

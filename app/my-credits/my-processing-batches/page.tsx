@@ -40,26 +40,36 @@ export default function MyProcessingBatchesPage() {
     }
   };
 
+  const loadDetail = async (batch: InvoiceBatch) => {
+    const [batchDetailResponse, invoicesResponse] =
+      await invoiceBatchApi.detail(batch.id);
+    if (batchDetailResponse.code === 200 && invoicesResponse.code === 200) {
+      setSelectedBatch(batch);
+      setSelectedBatchInvoices(invoicesResponse.data);
+    } else {
+      message.warning("Could not fetch batch details");
+    }
+  };
+
   const handleViewDetail = async (batch: InvoiceBatch) => {
     try {
-      const [batchDetailResponse, invoicesResponse] =
-        await invoiceBatchApi.detail(batch.id);
-      if (batchDetailResponse.code === 200 && invoicesResponse.code === 200) {
-        setSelectedBatch(batch);
-        setSelectedBatchInvoices(invoicesResponse.data);
-        setShowDetailModal(true);
-      } else {
-        message.warning("Could not fetch batch details");
-      }
+      await loadDetail(batch);
+      setShowDetailModal(true);
     } catch (error) {
       console.error(error);
       message.error("Failed to load batch details");
     }
   };
 
-  const handleConfirmBatch = (batch: InvoiceBatch) => {
-    setSelectedBatch(batch);
-    setShowConfirmModal(true);
+  const handleConfirmBatch = async (batch: InvoiceBatch) => {
+    try {
+      await loadDetail(batch);
+      setSelectedBatch(batch);
+      setShowConfirmModal(true);
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to load batch details");
+    }
   };
 
   const handleCloseDetailModal = () => {
@@ -139,6 +149,7 @@ export default function MyProcessingBatchesPage() {
         onCancel={handleCloseConfirmModal}
         onSuccess={handleConfirmSuccess}
         selectedBatch={selectedBatch}
+        selectedBatchInvoices={selectedBatchInvoices}
       />
 
       {/* <IssueTokenModal

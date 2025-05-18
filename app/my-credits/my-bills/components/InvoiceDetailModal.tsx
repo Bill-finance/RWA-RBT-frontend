@@ -5,11 +5,12 @@ import { Descriptions, Modal, Tag, Tooltip } from "antd";
 interface InvoiceDetailModalProps {
   open: boolean;
   onCancel: () => void;
-  selectedInvoice: Invoice;
+  selectedInvoices: Invoice[];
 }
 
 function InvoiceDetailModal(props: InvoiceDetailModalProps) {
-  const { open, onCancel, selectedInvoice } = props;
+  const { open, onCancel, selectedInvoices } = props;
+  const selectedInvoice = selectedInvoices?.[0];
   return (
     <Modal
       destroyOnClose
