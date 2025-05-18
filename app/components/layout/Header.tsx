@@ -9,6 +9,7 @@ import { Button, Dropdown } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import WalletButton from "../ui/WalletButton";
 import AuthButton from "../ui/AuthButton";
+import { isAuthenticated } from "@/app/utils/auth";
 
 const menuItems = [
   // { name: "Home", path: "/" },
@@ -39,12 +40,12 @@ export default function Header() {
   const { address } = useAccount();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
 
   // Handle hydration issue
   useEffect(() => {
     setMounted(true);
+    setIsUserAuthenticated(isAuthenticated());
   }, []);
 
   const MobileMenu = () => (

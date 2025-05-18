@@ -2,6 +2,7 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { parseEther } from "viem";
 import { BaseContractProps, CONTRACT_ABI } from "./contractABI";
 import { useEffect, useRef } from "react";
+import { message } from "@/app/components/ui/Message";
 
 if (!process.env.NEXT_PUBLIC_CONTRACT_ADDRESS) {
   throw new Error(
@@ -53,6 +54,7 @@ export const useCB = <T>({
 
   useEffect(() => {
     if (error && onErrorRef.current) {
+      message.error(`${error}`.slice(0, 48));
       onErrorRef.current(error);
     }
   }, [error]);

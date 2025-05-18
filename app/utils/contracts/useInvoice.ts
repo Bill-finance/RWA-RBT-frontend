@@ -7,7 +7,6 @@ import {
   useChainId,
   useConfig,
 } from "wagmi";
-import { useEffect, useRef } from "react";
 
 export const useInvoice = () => {
   const { contractAddress, contractAbi, address } = useContract();
@@ -15,21 +14,25 @@ export const useInvoice = () => {
   const config = useConfig();
   const currentChain = config.chains?.find((chain) => chain.id === chainId);
 
-  const useBatchCreateInvoices = ({ onSuccess }: BaseContractProps) => {
+  /** ✅ 批量创建票据 */
+  const useBatchCreateInvoices = (props: BaseContractProps) => {
+    const { onSuccess, onError, onLoading } = props;
     const {
       writeContract,
       error: writeContractError,
       data: hash,
+      isPending: isWritePending,
     } = useWriteContract();
     const {
       isSuccess,
       data,
       error: waitForTransactionReceiptError,
+      isPending: isReceiptPending,
     } = useWaitForTransactionReceipt({
       hash,
     });
 
-    const onSuccessRef = useRef(onSuccess);
+    // const onSuccessRef = useRef(onSuccess);
 
     const batchCreateInvoices = async (invoices: InvoiceData[]) => {
       if (!contractAddress) {
@@ -37,45 +40,47 @@ export const useInvoice = () => {
         return;
       }
 
-      try {
-        const transformedInvoices = invoices.map((invoice) => {
-          const res = {
-            invoiceNumber: invoice.invoice_number,
-            payee: invoice.payee,
-            payer: invoice.payer,
-            amount: BigInt(invoice.amount),
-            ipfsHash: invoice.ipfs_hash,
-            contractHash: invoice.contract_hash || "",
-            timestamp: BigInt(invoice.timestamp),
-            dueDate: BigInt(invoice.due_date),
-            tokenBatch: invoice.token_batch || "",
-            isCleared: Boolean(invoice.is_cleared),
-            isValid: Boolean(invoice.is_valid),
-          };
-
-          return res;
-        });
-
-        const params = {
-          abi: contractAbi,
-          address: contractAddress as `0x${string}`,
-          functionName: "batchCreateInvoices",
-          args: [transformedInvoices],
-          chain: currentChain,
-          account: address as `0x${string}`,
+      const transformedInvoices = invoices.map((invoice) => {
+        const res = {
+          invoiceNumber: invoice.invoice_number,
+          payee: invoice.payee,
+          payer: invoice.payer,
+          amount: BigInt(invoice.amount),
+          ipfsHash: invoice.ipfs_hash,
+          contractHash: invoice.contract_hash || "",
+          timestamp: BigInt(invoice.timestamp),
+          dueDate: BigInt(invoice.due_date),
+          tokenBatch: invoice.token_batch || "",
+          isCleared: Boolean(invoice.is_cleared),
+          isValid: Boolean(invoice.is_valid),
         };
 
-        writeContract(params);
-      } catch (err: unknown) {
-        throw err;
-      }
+        return res;
+      });
+
+      const params = {
+        abi: contractAbi,
+        address: contractAddress as `0x${string}`,
+        functionName: "batchCreateInvoices",
+        args: [transformedInvoices],
+        chain: currentChain,
+        account: address as `0x${string}`,
+      };
+
+      // 震惊，如果不加 await，此后的 error 不会被捕获
+      await writeContract(params);
     };
 
-    useEffect(() => {
-      if (isSuccess && hash && onSuccessRef.current) {
-        onSuccessRef.current({ data, hash, status: "success" });
-      }
-    }, [isSuccess, hash, data]);
+    useCB({
+      isSuccess,
+      isLoading: isWritePending || isReceiptPending,
+      hash,
+      data,
+      error: writeContractError || waitForTransactionReceiptError,
+      onSuccess,
+      onError,
+      onLoading,
+    });
 
     return {
       batchCreateInvoices,
@@ -86,7 +91,7 @@ export const useInvoice = () => {
     };
   };
 
-  /** ✅ 批量创建票据 */
+  /** ✅ 批量创建 TOkEN */
   const useCreateTokenBatch = ({
     onSuccess,
     onError,

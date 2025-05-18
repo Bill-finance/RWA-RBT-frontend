@@ -30,7 +30,14 @@ export default function MyBillsPage() {
   const { useBatchCreateInvoices } = useInvoice();
   const { batchCreateInvoices } = useBatchCreateInvoices({
     onSuccess: () => {
-      updateToBackend();
+      console.log("batchCreateInvoices onSuccess");
+      updateToBackend(processingIds[0]);
+      setProcessingIds([]);
+    },
+    onError: (error) => {
+      // ✅ 正确触发，只是有一些延迟
+      setProcessingIds([]);
+      console.error(error);
     },
   });
 
@@ -52,6 +59,7 @@ export default function MyBillsPage() {
       if (!res || res.code !== 200) {
         throw new Error("Invoice not found");
       }
+      console.log("invoiceApi detail res", res);
       const invoice = res.data[0];
 
       // 2. 准备合约数据
@@ -68,48 +76,36 @@ export default function MyBillsPage() {
         is_cleared: invoice.is_cleared,
         is_valid: invoice.is_valid,
       };
-      console.log("检查下参数", invoiceParams);
 
       // 3. 调用合约的 batchCreateInvoices 函数
-      try {
-        await batchCreateInvoices([invoiceParams]);
-      } catch (error: unknown) {
-        // 检查是否是用户取消
-        if (error !== null) {
-          message.error("User cancelled the transaction");
-          // 用户取消时也需要清除 loading 状态
-          setProcessingIds(processingIds.filter((pid) => pid !== id));
-          return;
-        }
-        throw error; // 重新抛出其他错误
-      }
+      await batchCreateInvoices([invoiceParams]);
     } catch (error) {
       console.error(error);
-      // 发生错误时清除 loading 状态
-      setProcessingIds(processingIds.filter((pid) => pid !== id));
     }
   };
 
   // 交易完成后上报
-  const updateToBackend = useCallback(async () => {
-    const currentProcessingId = processingIds[0];
-    if (!currentProcessingId) return;
-
-    try {
-      const response = await invoiceApi.verify(currentProcessingId);
-      if (response.code === 0 || response.code === 200) {
-        await loadInvoices({ setIsLoading, setInvoices });
-      } else {
-        throw new Error(response.msg || "Failed to verify invoice");
+  const updateToBackend = useCallback(
+    async (currentProcessingId: string) => {
+      try {
+        const response = await invoiceApi.verify(currentProcessingId);
+        console.log("updateToBackend response", response);
+        if (response.code === 0 || response.code === 200) {
+          await loadInvoices({ setIsLoading, setInvoices });
+        } else {
+          throw new Error(response.msg || "Failed to verify invoice");
+        }
+      } catch (error) {
+        message.error("Failed to verify invoice");
+        console.error("updateToBackend error", error);
       }
-    } catch (error) {
-      message.error(
-        error instanceof Error ? error.message : "Failed to verify invoice"
-      );
-    }
 
-    setProcessingIds((prev) => prev.filter((id) => id !== currentProcessingId));
-  }, [setProcessingIds, setIsLoading, setInvoices, processingIds]);
+      setProcessingIds((prev) =>
+        prev.filter((id) => id !== currentProcessingId)
+      );
+    },
+    [setProcessingIds, setIsLoading, setInvoices]
+  );
 
   const handleViewDetail = async (invoice: Invoice) => {
     try {

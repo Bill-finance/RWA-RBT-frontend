@@ -115,7 +115,7 @@ export const getTableColumns = (props) => {
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
-          {record.status === "PENDING" && address === record.payer && (
+          {record.status === "PENDING" && address === record.payee && (
             <Tooltip title="Verify">
               <Button
                 icon={<CheckOutlined />}
