@@ -14,7 +14,7 @@ export const useInvoice = () => {
   const config = useConfig();
   const currentChain = config.chains?.find((chain) => chain.id === chainId);
 
-  /** ✅ 批量创建票据 */
+  /** ✅ 债权人创建票据 */
   const useBatchCreateInvoices = (props: BaseContractProps) => {
     const { onSuccess, onError, onLoading } = props;
     const {
@@ -31,8 +31,6 @@ export const useInvoice = () => {
     } = useWaitForTransactionReceipt({
       hash,
     });
-
-    // const onSuccessRef = useRef(onSuccess);
 
     const batchCreateInvoices = async (invoices: InvoiceData[]) => {
       if (!contractAddress) {
@@ -84,19 +82,12 @@ export const useInvoice = () => {
 
     return {
       batchCreateInvoices,
-      isSuccess,
-      error: writeContractError || waitForTransactionReceiptError,
-      hash,
-      data,
     };
   };
 
-  /** ✅ 批量创建 TOkEN */
-  const useCreateTokenBatch = ({
-    onSuccess,
-    onError,
-    onLoading,
-  }: BaseContractProps) => {
+  /** ✅ 债权人申请创建 TOkEN（打包创建票据批次） */
+  const useCreateTokenBatch = (props: BaseContractProps) => {
+    const { onSuccess, onError, onLoading } = props;
     const {
       writeContract,
       error,
@@ -108,18 +99,7 @@ export const useInvoice = () => {
       isSuccess,
       isPending: isReceiptPending,
     } = useWaitForTransactionReceipt({
-      hash: hash,
-    });
-
-    useCB({
-      isSuccess,
-      isLoading: isWritePending || isReceiptPending,
       hash,
-      data,
-      error,
-      onSuccess,
-      onError,
-      onLoading,
     });
 
     const createTokenBatch = async (
@@ -159,29 +139,35 @@ export const useInvoice = () => {
       }
     };
 
-    return {
-      createTokenBatch,
+    useCB({
       isSuccess,
-      error,
+      isLoading: isWritePending || isReceiptPending,
       hash,
       data,
+      error,
+      onSuccess,
+      onError,
+      onLoading,
+    });
+
+    return {
+      createTokenBatch,
     };
   };
 
-  /** ✅ （）确认票据批次发行 */
-  const useConfirmTokenBatchIssue = () => {
+  /** 债务人确认票据批次 */
+  const useConfirmTokenBatchIssue = (props: BaseContractProps) => {
+    const { onSuccess, onError } = props;
     const {
       writeContract,
-      isPending,
+      isPending: isWritePending,
       isSuccess,
       error,
       data: hash,
     } = useWriteContract();
-
-    const { data: receipt, isLoading: isReceiptLoading } =
-      useWaitForTransactionReceipt({
-        hash: hash as `0x${string}`,
-      });
+    const { data, isLoading: isReceiptLoading } = useWaitForTransactionReceipt({
+      hash,
+    });
 
     const confirmTokenBatchIssue = async (batchId: string) => {
       if (!contractAddress) {
@@ -189,37 +175,30 @@ export const useInvoice = () => {
         return;
       }
 
-      try {
-        const params = {
-          abi: contractAbi,
-          address: contractAddress as `0x${string}`,
-          functionName: "confirmTokenBatchIssue",
-          args: [batchId],
-          account: address as `0x${string}`,
-          chain: currentChain,
-        };
+      const params = {
+        abi: contractAbi,
+        address: contractAddress as `0x${string}`,
+        functionName: "confirmTokenBatchIssue",
+        args: [batchId],
+        account: address as `0x${string}`,
+        chain: currentChain,
+      };
 
-        console.log("Confirming token batch issue with params:", {
-          batchId,
-        });
-
-        const result = await writeContract(params);
-        console.log("Transaction hash:", result);
-        return result;
-      } catch (err) {
-        console.error("Failed to confirm token batch issue:", err);
-        throw err;
-      }
+      await writeContract(params);
     };
+
+    useCB({
+      isSuccess,
+      isLoading: isWritePending || isReceiptLoading,
+      hash,
+      data,
+      error,
+      onSuccess,
+      onError,
+    });
 
     return {
       confirmTokenBatchIssue,
-      isPending,
-      isSuccess,
-      error,
-      hash,
-      receipt,
-      isReceiptLoading,
     };
   };
 

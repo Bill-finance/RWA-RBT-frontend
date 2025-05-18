@@ -1,23 +1,13 @@
 "use client";
-// 我的票据
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import {
-  Button,
-  Table,
-  Input,
-  Tooltip,
-  Typography,
-  Space,
-  Tag,
-  Card,
-} from "antd";
-import { SearchOutlined, EyeOutlined, CheckOutlined } from "@ant-design/icons";
+import { Table, Input, Typography, Space, Card } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import { InvoiceBatch, Invoice, invoiceBatchApi } from "@/app/utils/apis";
 import { message } from "@/app/components/ui/Message";
 import BatchDetailModal from "./components/BatchDetailModal";
 import ConfirmBatchModal from "./components/ConfirmBatchModal";
-import HashText from "@/app/components/ui/HashText";
+import { getTableColumns } from "./utils";
 
 const { Title } = Typography;
 
@@ -27,7 +17,6 @@ export default function MyProcessingBatchesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [showDetailModal, setShowDetailModal] = useState(false);
-  // const [_, setShowIssueModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<InvoiceBatch | null>(null);
   const [selectedBatchInvoices, setSelectedBatchInvoices] = useState<Invoice[]>(
@@ -51,12 +40,6 @@ export default function MyProcessingBatchesPage() {
     }
   };
 
-  useEffect(() => {
-    if (isConnected) {
-      loadBatches();
-    }
-  }, [isConnected]);
-
   const handleViewDetail = async (batch: InvoiceBatch) => {
     try {
       const [batchDetailResponse, invoicesResponse] =
@@ -79,11 +62,6 @@ export default function MyProcessingBatchesPage() {
     setShowConfirmModal(true);
   };
 
-  // const handleIssueToken = (batch: InvoiceBatch) => {
-  //   setSelectedBatch(batch);
-  //   setShowIssueModal(true);
-  // };
-
   const handleCloseDetailModal = () => {
     setShowDetailModal(false);
     setSelectedBatch(null);
@@ -95,21 +73,12 @@ export default function MyProcessingBatchesPage() {
     setSelectedBatch(null);
   };
 
-  // const handleCloseIssueModal = () => {
-  //   // setShowIssueModal(false);
-  //   setSelectedBatch(null);
-  // };
-
   const handleConfirmSuccess = () => {
     handleCloseConfirmModal();
     loadBatches(); // Refresh the batch list
   };
 
-  // const handleIssueSuccess = () => {
-  //   handleCloseIssueModal();
-  //   loadBatches(); // Refresh the batch list
-  // };
-
+  // TODO: 暂时使用前端搜索
   const filteredBatches = batches.filter(
     (batch) =>
       batch.id.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -118,88 +87,18 @@ export default function MyProcessingBatchesPage() {
       batch.status.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const columns = [
-    {
-      title: "Payee",
-      dataIndex: "payee",
-      key: "payee",
-      render: (text: string) => <HashText text={text} />,
-    },
-    {
-      title: "Payer",
-      dataIndex: "payer",
-      key: "payer",
-      render: (text: string) => <HashText text={text} />,
-    },
-    {
-      title: "Total Amount",
-      dataIndex: "total_amount",
-      key: "total_amount",
-      render: (amount: number, record: InvoiceBatch) =>
-        `${record.accepted_currency} ${Number(amount).toLocaleString()}`,
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (text: string) => {
-        let color = "default";
-        if (text === "PENDING") color = "orange";
-        if (text === "VERIFIED") color = "blue";
-        if (text === "ISSUED") color = "green";
-        return <Tag color={color}>{text}</Tag>;
-      },
-    },
-    {
-      title: "Created At",
-      dataIndex: "created_at",
-      key: "created_at",
-      render: (text: string) => (text ? text.slice(0, 10) : "-"),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_: unknown, record: InvoiceBatch) => {
-        console.log("record", record);
+  // TODO: 其他页面也需要注意这个问题，切换钱包后要刷新一次
+  useEffect(() => {
+    if (isConnected) {
+      loadBatches();
+    }
+  }, [isConnected]);
 
-        return (
-          <Space>
-            <Tooltip title="View Details">
-              <Button
-                type="text"
-                icon={<EyeOutlined />}
-                onClick={() => handleViewDetail(record)}
-              />
-            </Tooltip>
-
-            {address && record.payer === address && (
-              <Tooltip title="Confirm Batch">
-                <Button
-                  type="text"
-                  onClick={() => handleConfirmBatch(record)}
-                  icon={<CheckOutlined />}
-                  // icon={<SendOutlined rotate={-45} />}
-                />
-              </Tooltip>
-            )}
-
-            {/* {address &&
-              record.payer?.toLowerCase() === address.toLowerCase() && (
-                <Tooltip title="Issue Token">
-                  <Button
-                    type="text"
-                    onClick={() => handleIssueToken(record)}
-                    icon={<SendOutlined rotate={-45} />}
-                  />
-                </Tooltip>
-              )} */}
-          </Space>
-        );
-      },
-    },
-  ];
-
-  console.log("filteredBatches", filteredBatches);
+  const columns = getTableColumns({
+    address,
+    handleViewDetail,
+    handleConfirmBatch,
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">

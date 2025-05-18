@@ -13,3 +13,7 @@ export const formatTime = (time: string) => {
   }
   return dayjs(time).format("YYYY-MM-DD HH:mm:ss");
 };
+
+export const getAddress0 = () => {
+  return "0x0000000000000000000000000000000000000000";
+};

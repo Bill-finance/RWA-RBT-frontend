@@ -1,6 +1,7 @@
 import HashText from "@/app/components/ui/HashText";
+import { message } from "@/app/components/ui/Message";
 import { Invoice, invoiceApi } from "@/app/utils/apis/invoice";
-import { formatTimestamp } from "@/app/utils/time";
+import { formatTimestamp } from "@/app/utils/format";
 import { CheckOutlined, EyeOutlined } from "@ant-design/icons";
 import { Button, Input, Modal, Space, Tag, Tooltip } from "antd";
 
@@ -160,10 +161,7 @@ export const loadInvoices = async ({ setIsLoading, setInvoices }) => {
     }
   } catch (error) {
     console.error(error);
-    Modal.error({
-      title: "Error",
-      content: "Failed to load invoices. Please try again later.",
-    });
+    message.error("Failed to load invoices. Please try again later.");
   } finally {
     setIsLoading(false);
   }

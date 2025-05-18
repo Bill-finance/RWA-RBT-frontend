@@ -1,6 +1,6 @@
 "use client";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount } from "wagmi";
 import { Button, Table, Input, Typography, Space, Card } from "antd";
 import { SearchOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
@@ -25,13 +25,24 @@ export default function MyBillsPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [processingIds, setProcessingIds] = useState<string[]>([]);
+  const processingIdsRef = useRef<string[]>([]);
   const { address } = useAccount();
+
+  // 更新 ref 当 processingIds 变化时
+  useEffect(() => {
+    processingIdsRef.current = processingIds;
+  }, [processingIds]);
 
   const { useBatchCreateInvoices } = useInvoice();
   const { batchCreateInvoices } = useBatchCreateInvoices({
     onSuccess: () => {
-      console.log("batchCreateInvoices onSuccess");
-      updateToBackend(processingIds[0]);
+      // ✅ 正确触发
+      console.log("batchCreateInvoices onSuccess", processingIdsRef.current);
+      if (processingIdsRef.current.length > 0) {
+        updateToBackend(processingIdsRef.current[0]);
+      } else {
+        console.warn("No processing IDs available in onSuccess callback");
+      }
       setProcessingIds([]);
     },
     onError: (error) => {
@@ -99,12 +110,8 @@ export default function MyBillsPage() {
         message.error("Failed to verify invoice");
         console.error("updateToBackend error", error);
       }
-
-      setProcessingIds((prev) =>
-        prev.filter((id) => id !== currentProcessingId)
-      );
     },
-    [setProcessingIds, setIsLoading, setInvoices]
+    [setIsLoading, setInvoices]
   );
 
   const handleViewDetail = async (invoice: Invoice) => {
@@ -124,6 +131,9 @@ export default function MyBillsPage() {
       setSelectedInvoice(invoice);
       setShowDetailModal(true);
     }
+    // finally {
+    // setProcessingIds([]);
+    // }
   };
 
   const filteredInvoices = invoices.filter(

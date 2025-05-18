@@ -1,7 +1,9 @@
-import { Button, Form, Input, InputNumber, Modal, message } from "antd";
+import { Button, Form, Input, InputNumber, Modal } from "antd";
 import { useState, useEffect, useCallback } from "react";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
-import { invoiceApi } from "@/app/utils/apis";
+import { Invoice, invoiceApi } from "@/app/utils/apis";
+import { message } from "@/app/components/ui/Message";
+import { getAddress0 } from "@/app/utils/format";
 
 interface CreateTokenBatchModalProps {
   open: boolean;
@@ -25,305 +27,123 @@ function CreateTokenBatchModal({
   onCancel,
   selectedInvoices,
   invoiceNumbers,
-  onSuccess,
   setProcessingIds,
   processingIds,
 }: CreateTokenBatchModalProps) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
-  const [creationComplete, setCreationComplete] = useState(false);
-  const [confirmationComplete, setConfirmationComplete] = useState(false);
+  const [batchId, setBatchId] = useState<string | null>(null);
 
-  // Get contract hooks
-  const { useCreateTokenBatch, useConfirmTokenBatchIssue } = useInvoice();
-  const {
-    createTokenBatch: executeCreateTokenBatch,
-    isSuccess: isCreateBatchSuccess,
-    error: createBatchError,
-  } = useCreateTokenBatch({
+  const { useCreateTokenBatch } = useInvoice();
+  const { createTokenBatch } = useCreateTokenBatch({
     onSuccess: () => {
-      // TODO:
+      updateBackend();
+      setSubmitting(false);
+      setProcessingIds(
+        processingIds.filter((id) => !selectedInvoices.includes(id))
+      );
+      message.success("Token batch created successfully");
+    },
+    onError: (error) => {
+      console.error(error);
+      setSubmitting(false);
+      setProcessingIds(
+        processingIds.filter((id) => !selectedInvoices.includes(id))
+      );
     },
   });
 
-  const {
-    isPending: isConfirmPending,
-    isSuccess: isConfirmSuccess,
-    error: confirmError,
-  } = useConfirmTokenBatchIssue();
-
-  // Update backend after confirmation is complete
-  const updateBackend = useCallback(
-    async (batchId: string) => {
-      try {
-        // First verify if the batch was properly created by checking invoices
-        let verificationAttempts = 0;
-        let allInvoicesVerified = false;
-
-        // Try verification a few times with delays
-        while (verificationAttempts < 3 && !allInvoicesVerified) {
-          verificationAttempts++;
-          allInvoicesVerified = true;
-
-          // Check a sample of invoices to be sure
-          for (let i = 0; i < Math.min(2, invoiceNumbers.length); i++) {
-            try {
-              const detailResponse = await invoiceApi.detail(invoiceNumbers[i]);
-              if (detailResponse.code !== 200 || !detailResponse.data.length) {
-                console.warn(`Invoice ${invoiceNumbers[i]} details not found`);
-                allInvoicesVerified = false;
-                break;
-              }
-            } catch (err) {
-              console.error(
-                `Error checking invoice ${invoiceNumbers[i]}:`,
-                err
-              );
-              allInvoicesVerified = false;
-              break;
-            }
-          }
-
-          if (!allInvoicesVerified && verificationAttempts < 3) {
-            // Wait before trying again
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-          }
+  const updateBackend = useCallback(async () => {
+    try {
+      const detailPromises = [];
+      for (let i = 0; i < invoiceNumbers.length; i++) {
+        try {
+          const detailResponse = invoiceApi.detail(invoiceNumbers[i]);
+          detailPromises.push(detailResponse);
+        } catch (err) {
+          console.error(`Error checking invoice ${invoiceNumbers[i]}:`, err);
+          break;
         }
-
-        // Even if verification fails, we'll still try to update the backend
-        // since the blockchain transaction was successful
-
-        // Update backend via API with multiple retries
-        let backendUpdateAttempts = 0;
-        let backendUpdateSuccess = false;
-
-        while (backendUpdateAttempts < 3 && !backendUpdateSuccess) {
-          backendUpdateAttempts++;
-
-          try {
-            const response = await invoiceApi.issue(selectedInvoices, batchId);
-
-            if (response.code === 0 || response.code === 200) {
-              message.success(
-                "Invoices issued successfully as batch: " + batchId
-              );
-              backendUpdateSuccess = true;
-              // Refresh the list and close modal
-              onSuccess();
-              onCancel();
-            } else {
-              if (backendUpdateAttempts < 3) {
-                console.warn(
-                  `Backend update attempt ${backendUpdateAttempts} failed:`,
-                  response.msg
-                );
-                // Wait before retrying
-                await new Promise((resolve) => setTimeout(resolve, 3000));
-              } else {
-                throw new Error(
-                  response.msg ||
-                    "Failed to update backend after multiple attempts"
-                );
-              }
-            }
-          } catch (apiError) {
-            if (backendUpdateAttempts < 3) {
-              console.error(
-                `Backend API error on attempt ${backendUpdateAttempts}:`,
-                apiError
-              );
-              // Wait before retrying
-              await new Promise((resolve) => setTimeout(resolve, 3000));
-            } else {
-              throw apiError;
-            }
-          }
-        }
-
-        if (!backendUpdateSuccess) {
-          setError(
-            "Blockchain transactions were successful, but backend could not be updated. Please contact support."
-          );
-        }
-      } catch (error) {
-        console.error("Error updating backend:", error);
-        message.error("Failed to update backend status");
-        setError(
-          error instanceof Error ? error.message : "Failed to update backend"
-        );
-      } finally {
-        setSubmitting(false);
-        // Clear processing IDs
-        setProcessingIds(
-          processingIds.filter((id) => !selectedInvoices.includes(id))
-        );
       }
-    },
-    [
-      selectedInvoices,
-      processingIds,
-      setProcessingIds,
-      invoiceNumbers,
-      onSuccess,
-      onCancel,
-    ]
-  );
 
-  // Reset all states when modal opens/closes
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      form.resetFields();
-      setCurrentBatchId(null);
-      setCreationComplete(false);
-      setConfirmationComplete(false);
+      const detailResponses: {
+        code: number;
+        msg: string;
+        data: Invoice[];
+      }[] = await Promise.all(detailPromises);
 
-      // Set default values
-      form.setFieldsValue({
-        stableTokenAddress: "0x0000000000000000000000000000000000000000",
-        minTerm: 3,
-        maxTerm: 12,
-        interestRate: 5, // 5%
-      });
-    }
-  }, [open, form]);
-
-  // Monitor token batch creation status
-  useEffect(() => {
-    if (!currentBatchId) return;
-
-    // Check for error condition (transaction rejected or failed)
-    if (createBatchError) {
-      console.error("Token batch creation failed:", createBatchError);
-      message.error("Failed to create token batch on blockchain");
-      setError("Transaction failed or was rejected");
-      setSubmitting(false);
-      // Clear processing IDs
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
-      return;
-    }
-
-    if (isCreateBatchSuccess && !creationComplete) {
-      setCreationComplete(true);
-      message.success("Token batch created successfully!");
-
-      if (currentBatchId) {
-        updateBackend(currentBatchId);
+      if (
+        detailResponses.some((response) => response.code !== 200) ||
+        detailResponses.some((response) => response.data.length === 0)
+      ) {
+        message.error("Failed to check invoice details");
+        return;
       }
+
+      const invoiceIds = detailResponses
+        .map((invoice) => invoice.data.map((invoice) => invoice.id))
+        .flat();
+
+      const issueResponse = await invoiceApi.issue(invoiceIds, batchId);
+      if (issueResponse.code !== 200) {
+        console.error(`Failed to issue invoice`);
+      }
+      console.log("issueResponse!!", issueResponse);
+    } catch (error) {
+      console.error("Error updating backend:", error);
+      message.error("Failed to update backend status");
     }
-  }, [
-    currentBatchId,
-    isCreateBatchSuccess,
-    createBatchError,
-    creationComplete,
-    processingIds,
-    selectedInvoices,
-    setProcessingIds,
-    updateBackend,
-  ]);
-
-  // Monitor token batch confirmation status
-  useEffect(() => {
-    if (!currentBatchId || !creationComplete) return;
-
-    // Check for error condition (transaction rejected or failed)
-    if (confirmError) {
-      console.error("Token batch confirmation failed:", confirmError);
-      message.error("Failed to confirm token batch on blockchain");
-      setError("Confirmation transaction failed or was rejected");
-      setSubmitting(false);
-      // Clear processing IDs
-      setProcessingIds(
-        processingIds.filter((id) => !selectedInvoices.includes(id))
-      );
-      return;
-    }
-
-    if (isConfirmSuccess && !confirmationComplete) {
-      setConfirmationComplete(true);
-      message.success("Token batch issuance confirmed!");
-
-      // Proceed to backend update
-      updateBackend(currentBatchId);
-    }
-  }, [
-    currentBatchId,
-    creationComplete,
-    isConfirmPending,
-    isConfirmSuccess,
-    confirmError,
-    confirmationComplete,
-    processingIds,
-    selectedInvoices,
-    updateBackend,
-    setProcessingIds,
-  ]);
+  }, [batchId, invoiceNumbers]);
 
   const handleCancel = () => {
     if (submitting) {
       return; // Prevent closing during submission
     }
-    setError(null);
     form.resetFields();
     onCancel();
   };
 
   const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      setSubmitting(true);
-      setError(null);
+    const values = await form.validateFields();
+    setSubmitting(true);
+    setProcessingIds([...processingIds, ...selectedInvoices]);
+    // 利率的表示形式：(5% -> 500)
+    const formattedValues: TokenBatchFormValues = {
+      ...values,
+      interestRate: Math.floor(values.interestRate * 100),
+    };
 
-      // Convert interest rate from percentage to basis points (5% -> 500)
-      const formattedValues: TokenBatchFormValues = {
-        ...values,
-        interestRate: Math.floor(values.interestRate * 100),
-      };
-
-      // Mark selected invoices as processing
-      setProcessingIds([...processingIds, ...selectedInvoices]);
-
-      // Generate batch ID
-      const newBatchId = `BATCH-${Date.now()}-${Math.floor(
-        Math.random() * 1000
-      )}`;
-      setCurrentBatchId(newBatchId);
-
-      // Create token batch on blockchain
-      try {
-        message.loading("Creating token batch...", 0);
-        await executeCreateTokenBatch(
-          newBatchId,
-          invoiceNumbers,
-          formattedValues.stableTokenAddress,
-          formattedValues.minTerm,
-          formattedValues.maxTerm,
-          formattedValues.interestRate
-        );
-      } catch (err) {
-        console.error("Failed to initiate token batch creation:", err);
-        message.error("Failed to create token batch");
-        setSubmitting(false);
-        setProcessingIds(
-          processingIds.filter((id) => !selectedInvoices.includes(id))
-        );
-        throw err;
-      }
-    } catch (err: unknown) {
-      console.error("Form validation or submission failed:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred while creating the token batch"
-      );
-      setSubmitting(false);
-      message.destroy();
-    }
+    await createTokenBatch(
+      batchId,
+      invoiceNumbers,
+      formattedValues.stableTokenAddress,
+      formattedValues.minTerm,
+      formattedValues.maxTerm,
+      formattedValues.interestRate
+    );
   };
+
+  useEffect(() => {
+    if (open) {
+      form.resetFields();
+
+      form.setFieldsValue({
+        stableTokenAddress: getAddress0(),
+        minTerm: 3,
+        maxTerm: 12,
+        interestRate: 5, // 5%
+      });
+    }
+
+    return () => {};
+  }, [open, form]);
+
+  useEffect(() => {
+    const newBatchId = `BATCH-${Date.now()}-${Math.floor(
+      Math.random() * 1000
+    )}`;
+    setBatchId(newBatchId);
+  }, []);
 
   return (
     <Modal
@@ -338,20 +158,13 @@ function CreateTokenBatchModal({
         <Button
           key="submit"
           type="primary"
-          danger={!!error}
           loading={submitting}
           onClick={handleSubmit}
         >
-          {error ? "Retry" : "Create Batch"}
+          Create Batch
         </Button>,
       ]}
     >
-      {error && (
-        <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-red-600">
-          {error}
-        </div>
-      )}
-
       <Form form={form} layout="vertical">
         <Form.Item
           name="stableTokenAddress"

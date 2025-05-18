@@ -1,5 +1,5 @@
 import { Invoice } from "@/app/utils/apis";
-import { formatTime, formatTimestamp } from "@/app/utils/time";
+import { formatTime, formatTimestamp } from "@/app/utils/format";
 import { Descriptions, Modal, Tag, Tooltip } from "antd";
 
 interface InvoiceDetailModalProps {
