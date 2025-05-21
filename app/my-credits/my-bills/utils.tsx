@@ -1,9 +1,8 @@
 import HashText from "@/app/components/ui/HashText";
-import { message } from "@/app/components/ui/Message";
-import { Invoice, invoiceApi } from "@/app/utils/apis/invoice";
+import { Invoice } from "@/app/utils/apis/invoice";
 import { formatTimestamp } from "@/app/utils/format";
 import { CheckOutlined, EyeOutlined } from "@ant-design/icons";
-import { Button, Input, Modal, Space, Tag, Tooltip } from "antd";
+import { Button, Input, Space, Tag, Tooltip } from "antd";
 
 export const getTableColumns = (props) => {
   const {
@@ -145,24 +144,4 @@ export const getTableColumns = (props) => {
   ];
 
   return columns;
-};
-
-export const loadInvoices = async ({ setIsLoading, setInvoices }) => {
-  setIsLoading(true);
-  try {
-    const response = await invoiceApi.list();
-    if (response.code === 200) {
-      setInvoices(response.data);
-    } else {
-      Modal.error({
-        title: "Failed to load invoices",
-        content: response.msg || "Could not retrieve invoices data",
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    message.error("Failed to load invoices. Please try again later.");
-  } finally {
-    setIsLoading(false);
-  }
 };

@@ -1,5 +1,5 @@
 import { Button, Form, Input, InputNumber, Modal } from "antd";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useInvoice } from "@/app/utils/contracts/useInvoice";
 import { Invoice, invoiceApi } from "@/app/utils/apis";
 import { message } from "@/app/components/ui/Message";
@@ -38,20 +38,20 @@ function CreateTokenBatchModal(props: CreateTokenBatchModalProps) {
   const [batchId, setBatchId] = useState<string | null>(null);
 
   // // TODO: 这里有闭包问题，先这么解决，后面重构
-  // const latestValuesRef = useRef({
-  //   invoiceNumbers: invoiceNumbers,
-  //   batchId: null as string | null,
-  //   selectedInvoiceIds: selectedInvoiceIds,
-  // });
+  const latestValuesRef = useRef({
+    invoiceNumbers: invoiceNumbers,
+    batchId: null as string | null,
+    selectedInvoiceIds: selectedInvoiceIds,
+  });
 
-  // useEffect(() => {
-  //   latestValuesRef.current.invoiceNumbers = invoiceNumbers;
-  //   latestValuesRef.current.selectedInvoiceIds = selectedInvoiceIds;
-  // }, [invoiceNumbers, selectedInvoiceIds]);
+  useEffect(() => {
+    latestValuesRef.current.invoiceNumbers = invoiceNumbers;
+    latestValuesRef.current.selectedInvoiceIds = selectedInvoiceIds;
+  }, [invoiceNumbers, selectedInvoiceIds]);
 
-  // useEffect(() => {
-  //   latestValuesRef.current.batchId = batchId;
-  // }, [batchId]);
+  useEffect(() => {
+    latestValuesRef.current.batchId = batchId;
+  }, [batchId]);
 
   const { useCreateTokenBatch } = useInvoice();
   const { createTokenBatch } = useCreateTokenBatch({
@@ -69,14 +69,16 @@ function CreateTokenBatchModal(props: CreateTokenBatchModalProps) {
 
   const updateBackend = useCallback(async () => {
     try {
-      console.log("updateBackend with invoiceNumbers:", invoiceNumbers);
+      console.log(
+        "updateBackend with invoiceNumbers:",
+        latestValuesRef.current.invoiceNumbers
+      );
 
-      const detailPromises = invoiceNumbers.map((invoiceNumber) =>
-        invoiceApi.detail(invoiceNumber)
+      const detailPromises = latestValuesRef.current.invoiceNumbers.map(
+        (invoiceNumber) => invoiceApi.detail(invoiceNumber)
       );
       const detailResponses = await Promise.all(detailPromises);
 
-      console.log("detailResponses", invoiceNumbers, detailResponses);
       if (
         detailResponses.some((response) => response.code !== 200) ||
         detailResponses.some((response) => response.data.length === 0)

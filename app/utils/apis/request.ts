@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from "axios";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
 // http://43.134.99.111:8888/swagger-ui/
 
@@ -21,20 +21,24 @@ request.interceptors.request.use(
   }
 );
 
+const checkIsAuthorized = (response: AxiosResponse) => {
+  console.log("handleUnauthorized", response);
+  const { data } = response;
+  if (data.code === 401) {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+  }
+};
+
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
+    checkIsAuthorized(response);
     return response.data;
   },
   (error) => {
     if (error.response) {
-      const { status, data } = error.response;
-      if (status === 401) {
-        // 处理未授权错误
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      return Promise.reject(data);
+      console.error("response error", error);
     }
     return Promise.reject(error);
   }

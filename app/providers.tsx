@@ -59,12 +59,12 @@ const mantleSepoliaTestNet: Chain = {
 const config = createConfig({
   chains: [mainnet, sepolia, phaseTestnet, mantleSepoliaTestNet],
   transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
-    [phaseTestnet.id]: http(process.env.NEXT_PUBLIC_PHASE_RPC_URL),
     [mantleSepoliaTestNet.id]: http(
       process.env.NEXT_PUBLIC_MANTLE_SEPOLIA_RPC_URL
     ),
+    [mainnet.id]: http(),
+    [sepolia.id]: http(),
+    [phaseTestnet.id]: http(process.env.NEXT_PUBLIC_PHASE_RPC_URL),
   },
 });
 

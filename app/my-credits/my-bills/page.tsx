@@ -9,7 +9,7 @@ import { message } from "@/app/components/ui/Message";
 import CreateInvoiceModal from "./components/CreateInvoiceModal";
 import CreateTokenBatchModal from "./components/CreateTokenBatchModal";
 import { ColumnsType } from "antd/es/table";
-import { getTableColumns, loadInvoices } from "./utils";
+import { getTableColumns } from "./utils";
 import InvoiceDetailModal from "./components/InvoiceDetailModal";
 
 const { Title } = Typography;
@@ -37,11 +37,7 @@ export default function MyBillsPage() {
     onSuccess: () => {
       // ✅ 正确触发
       console.log("batchCreateInvoices onSuccess", processingIdsRef.current);
-      if (processingIdsRef.current.length > 0) {
-        updateToBackend(processingIdsRef.current[0]);
-      } else {
-        console.warn("No processing IDs available in onSuccess callback");
-      }
+      updateToBackend();
       setProcessingIds([]);
     },
     onError: (error) => {
@@ -96,22 +92,23 @@ export default function MyBillsPage() {
   };
 
   // 交易完成后上报
-  const updateToBackend = useCallback(
-    async (currentProcessingId: string) => {
-      try {
-        const response = await invoiceApi.verify(currentProcessingId);
-        if (response.code === 0 || response.code === 200) {
-          await loadInvoices({ setIsLoading, setInvoices });
-        } else {
-          throw new Error(response.msg || "Failed to verify invoice");
-        }
-      } catch (error) {
-        message.error("Failed to verify invoice");
-        console.error("updateToBackend error", error);
+  const updateToBackend = useCallback(async () => {
+    if (processingIdsRef.current.length <= 0) {
+      return;
+    }
+    const currentProcessingId = processingIdsRef.current[0];
+    try {
+      const response = await invoiceApi.verify(currentProcessingId);
+      if (response.code === 0 || response.code === 200) {
+        await loadInvoices({ setIsLoading, setInvoices });
+      } else {
+        throw new Error(response.msg || "Failed to verify invoice");
       }
-    },
-    [setIsLoading, setInvoices]
-  );
+    } catch (error) {
+      message.error("Failed to verify invoice");
+      console.error("updateToBackend error", error);
+    }
+  }, [setIsLoading, setInvoices]);
 
   const handleViewDetail = async (invoice: Invoice) => {
     try {
@@ -139,6 +136,23 @@ export default function MyBillsPage() {
       setSelectedInvoices([...selectedInvoices, record]);
     } else {
       setSelectedInvoices(selectedInvoices.filter((id) => id !== record.id));
+    }
+  };
+
+  const loadInvoices = async ({ setIsLoading, setInvoices }) => {
+    setIsLoading(true);
+    try {
+      const response = await invoiceApi.list();
+      if (response.code === 200) {
+        setInvoices(response.data);
+      } else {
+        message.error("Failed to load invoices");
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to load invoices. Please try again later.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
